@@ -18,15 +18,25 @@ export default function AdminAccountStep() {
     phone: ''
   })
 
+  const [error, setError] = useState<string | null>(null)
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (form.password !== form.confirmPassword) {
-      alert('Les mots de passe ne correspondent pas.')
+    if (!isPasswordValid(form.password)) {
+      setError(
+        'Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial.'
+      )
       return
     }
 
-    // ✅ Stockage dans Zustand
+    if (form.password !== form.confirmPassword) {
+      setError('Les mots de passe ne correspondent pas.')
+      return
+    }
+
+    setError(null)
+
     setData({
       password: form.password,
       birthdate: form.birthdate,
@@ -38,7 +48,6 @@ export default function AdminAccountStep() {
 
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-10 relative">
-      {/* Logo haut gauche */}
       <Link
         href="/"
         className="absolute top-6 left-6 flex items-center gap-2 text-[#093A23] font-inter font-bold text-xl"
@@ -56,37 +65,47 @@ export default function AdminAccountStep() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
+          <FloatingInput
+            id="password"
+            label="Mot de passe *"
             type="password"
-            placeholder="Mot de passe *"
-            required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
             value={form.password}
-            onChange={e => setForm({ ...form, password: e.target.value })}
+            onChange={val => {
+              setForm({ ...form, password: val })
+              setError(null)
+            }}
+            required
           />
-          <input
+          <FloatingInput
+            id="confirmPassword"
+            label="Confirmer le mot de passe *"
             type="password"
-            placeholder="Confirmer le mot de passe *"
-            required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
             value={form.confirmPassword}
-            onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
-          />
-          <input
-            type="date"
-            placeholder="Date de naissance *"
+            onChange={val => {
+              setForm({ ...form, confirmPassword: val })
+              setError(null)
+            }}
             required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+          />
+          <FloatingInput
+            id="birthdate"
+            label="Date de naissance *"
+            type="date"
             value={form.birthdate}
-            onChange={e => setForm({ ...form, birthdate: e.target.value })}
+            onChange={val => setForm({ ...form, birthdate: val })}
+            required
           />
-          <input
+          <FloatingInput
+            id="phone"
+            label="Téléphone (optionnel)"
             type="tel"
-            placeholder="Téléphone (optionnel)"
-            className="w-full border border-gray-300 px-4 py-2 rounded"
             value={form.phone}
-            onChange={e => setForm({ ...form, phone: e.target.value })}
+            onChange={val => setForm({ ...form, phone: val })}
           />
+
+          {error && (
+            <p className="text-sm text-red-600 font-medium">{error}</p>
+          )}
 
           <button
             type="submit"
@@ -97,5 +116,53 @@ export default function AdminAccountStep() {
         </form>
       </div>
     </main>
+  )
+}
+
+function isPasswordValid(password: string): boolean {
+  const minLength = /.{8,}/
+  const hasUppercase = /[A-Z]/
+  const hasNumber = /[0-9]/
+  const hasSpecialChar = /[^A-Za-z0-9]/
+
+  return (
+    minLength.test(password) &&
+    hasUppercase.test(password) &&
+    hasNumber.test(password) &&
+    hasSpecialChar.test(password)
+  )
+}
+
+type FloatingInputProps = {
+  id: string
+  label: string
+  value: string
+  onChange: (val: string) => void
+  type?: string
+  required?: boolean
+}
+
+function FloatingInput({ id, label, value, onChange, type = 'text', required = false }: FloatingInputProps) {
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type={type}
+        required={required}
+        placeholder=" "
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
+      />
+      <label
+        htmlFor={id}
+        className="absolute left-4 text-gray-500 text-sm transition-all font-medium
+          peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
+          peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23]
+          peer-not-placeholder-shown:top-1 peer-not-placeholder-shown:text-sm peer-not-placeholder-shown:text-[#093A23]"
+      >
+        {label}
+      </label>
+    </div>
   )
 }

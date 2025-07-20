@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -23,18 +23,49 @@ export default function EtablissementStep() {
     annee_ouverture: ''
   })
 
+  const [suggestions, setSuggestions] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (form.rue.length < 3) {
+        setSuggestions([])
+        return
+      }
+
+      try {
+        const res = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(form.rue)}&limit=5`)
+        const data = await res.json()
+        setSuggestions(data.features || [])
+      } catch (error) {
+        console.error('Erreur autocomplétion adresse :', error)
+        setSuggestions([])
+      }
+    }
+
+    const delayDebounce = setTimeout(fetchSuggestions, 300)
+    return () => clearTimeout(delayDebounce)
+  }, [form.rue])
+
+  const handleSelectSuggestion = (feature: any) => {
+    const props = feature.properties
+    setForm({
+      ...form,
+      rue: props.name || '',
+      code_postal: props.postcode || '',
+      ville: props.city || '',
+      pays: 'France'
+    })
+    setSuggestions([])
+  }
+
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault()
-
-    // 🧠 Stocke les données dans Zustand
     setData(form)
-
     router.push('/signup/pro/compte')
   }
 
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-10 relative">
-      {/* Logo haut gauche */}
       <Link
         href="/"
         className="absolute top-6 left-6 flex items-center gap-2 text-[#093A23] font-inter font-bold text-xl"
@@ -52,75 +83,110 @@ export default function EtablissementStep() {
         </p>
 
         <form onSubmit={handleContinue} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Nom de la boutique *"
-            required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+          <FloatingInput
+            id="nom"
+            label="Nom de la boutique *"
             value={form.nom}
-            onChange={e => setForm({ ...form, nom: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Rue *"
+            onChange={val => setForm({ ...form, nom: val })}
             required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
-            value={form.rue}
-            onChange={e => setForm({ ...form, rue: e.target.value })}
           />
-          <input
-            type="text"
-            placeholder="Code postal *"
-            required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+
+          {/* Rue avec autocomplétion */}
+          <div className="relative">
+            <input
+              id="rue"
+              type="text"
+              required
+              placeholder=" "
+              value={form.rue}
+              onChange={e => setForm({ ...form, rue: e.target.value })}
+              className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
+            />
+            <label
+              htmlFor="rue"
+              className="absolute left-4 text-gray-500 text-sm transition-all font-medium
+                peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
+                peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23]
+                peer-not-placeholder-shown:top-1 peer-not-placeholder-shown:text-sm peer-not-placeholder-shown:text-[#093A23]"
+            >
+              Rue *
+            </label>
+            {suggestions.length > 0 && (
+              <ul className="absolute z-10 top-full left-0 right-0 bg-white border border-gray-300 rounded mt-1 max-h-52 overflow-auto shadow-md">
+                {suggestions.map((sug, idx) => (
+                  <li
+                    key={idx}
+                    onClick={() => handleSelectSuggestion(sug)}
+                    className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                  >
+                    {sug.properties.label}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <FloatingInput
+            id="code_postal"
+            label="Code postal *"
             value={form.code_postal}
-            onChange={e => setForm({ ...form, code_postal: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Ville *"
+            onChange={val => setForm({ ...form, code_postal: val })}
             required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+          />
+          <FloatingInput
+            id="ville"
+            label="Ville *"
             value={form.ville}
-            onChange={e => setForm({ ...form, ville: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Pays *"
+            onChange={val => setForm({ ...form, ville: val })}
             required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+          />
+          <FloatingInput
+            id="pays"
+            label="Pays *"
             value={form.pays}
-            onChange={e => setForm({ ...form, pays: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Type d’activité * (ex : Boulangerie)"
+            onChange={val => setForm({ ...form, pays: val })}
             required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+          />
+
+          <FloatingSelect
+            id="type_activite"
+            label="Type d’activité *"
             value={form.type_activite}
-            onChange={e => setForm({ ...form, type_activite: e.target.value })}
-          />
-          <input
-            type="number"
-            placeholder="Année d’ouverture *"
+            onChange={val => setForm({ ...form, type_activite: val })}
+            options={[
+              'boulangerie',
+              'épicerie',
+              'fromagerie',
+              'boucherie',
+              'restaurant',
+              'café',
+              'primeur',
+              'traiteur',
+              'autre'
+            ]}
             required
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+          />
+
+          <FloatingInput
+            id="annee_ouverture"
+            label="Année d’ouverture *"
+            type="number"
             value={form.annee_ouverture}
-            onChange={e => setForm({ ...form, annee_ouverture: e.target.value })}
+            onChange={val => setForm({ ...form, annee_ouverture: val })}
+            required
           />
-          <input
+          <FloatingInput
+            id="telephone"
+            label="Téléphone (optionnel)"
             type="tel"
-            placeholder="Téléphone (optionnel)"
-            className="w-full border border-gray-300 px-4 py-2 rounded"
             value={form.telephone}
-            onChange={e => setForm({ ...form, telephone: e.target.value })}
+            onChange={val => setForm({ ...form, telephone: val })}
           />
-          <input
-            type="text"
-            placeholder="SIRET (optionnel)"
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+          <FloatingInput
+            id="siret"
+            label="SIRET (optionnel)"
             value={form.siret}
-            onChange={e => setForm({ ...form, siret: e.target.value })}
+            onChange={val => setForm({ ...form, siret: val })}
           />
 
           <button
@@ -132,5 +198,79 @@ export default function EtablissementStep() {
         </form>
       </div>
     </main>
+  )
+}
+
+type FloatingInputProps = {
+  id: string
+  label: string
+  value: string
+  onChange: (val: string) => void
+  type?: string
+  required?: boolean
+}
+
+function FloatingInput({ id, label, value, onChange, type = 'text', required = false }: FloatingInputProps) {
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type={type}
+        required={required}
+        placeholder=" "
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
+      />
+      <label
+        htmlFor={id}
+        className="absolute left-4 text-gray-500 text-sm transition-all font-medium
+          peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
+          peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23]
+          peer-not-placeholder-shown:top-1 peer-not-placeholder-shown:text-sm peer-not-placeholder-shown:text-[#093A23]"
+      >
+        {label}
+      </label>
+    </div>
+  )
+}
+
+type FloatingSelectProps = {
+  id: string
+  label: string
+  value: string
+  onChange: (val: string) => void
+  options: string[]
+  required?: boolean
+}
+
+function FloatingSelect({ id, label, value, onChange, options, required = false }: FloatingSelectProps) {
+  return (
+    <div className="relative">
+      <select
+        id={id}
+        required={required}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 bg-white appearance-none
+          focus:outline-none focus:border-[#093A23]"
+      >
+        <option value="" disabled hidden></option>
+        {options.map(option => (
+          <option key={option} value={option}>
+            {option.charAt(0).toUpperCase() + option.slice(1)}
+          </option>
+        ))}
+      </select>
+      <label
+        htmlFor={id}
+        className="absolute left-4 text-gray-500 text-sm transition-all font-medium pointer-events-none
+          peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
+          peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23]
+          peer-not-placeholder-shown:top-1 peer-not-placeholder-shown:text-sm peer-not-placeholder-shown:text-[#093A23]"
+      >
+        {label}
+      </label>
+    </div>
   )
 }
