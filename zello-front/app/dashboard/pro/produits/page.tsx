@@ -158,67 +158,70 @@ export default function ProduitsPage() {
   {/* Espace (1 colonne) */}
   <div className="col-span-3" />
 
-  {/* Prix (3 colonnes) */}
-  <div className="col-span-7">
-    <label className="text-xs text-gray-600 font-medium mb-1 block">
-      Prix : {priceRange[0]}€ – {priceRange[1]}€
-    </label>
-    <div className="w-full">
-      <Range
-        step={0.01}
-        min={minPrice}
-        max={maxPrice}
-        values={priceRange}
-        onChange={(values) => {
-          const clamped = [
-            Math.max(minPrice, Math.min(values[0], maxPrice)),
-            Math.max(minPrice, Math.min(values[1], maxPrice)),
-          ] as [number, number]
-          if (clamped[0] <= clamped[1]) {
-            setPriceRange(clamped)
-          }
-        }}
-        renderTrack={({ props, children }) => {
-          const [minVal, maxVal] = priceRange
-          const rangePercent = maxPrice !== minPrice
-            ? ((maxVal - minVal) / (maxPrice - minPrice)) * 100
-            : 0
-          const leftPercent = maxPrice !== minPrice
-            ? ((minVal - minPrice) / (maxPrice - minPrice)) * 100
-            : 0
+ {/* Prix (3 colonnes) */}
+<div className="col-span-7">
+  <label className="text-xs text-gray-600 font-medium mb-1 block">
+    Prix : {priceRange[0]}€ – {priceRange[1]}€
+  </label>
+  <div className="w-full">
+    <Range
+      step={0.01}
+      min={minPrice}
+      max={maxPrice}
+      values={priceRange}
+      onChange={(values) => {
+        const clamped = [
+          Math.max(minPrice, Math.min(values[0], maxPrice)),
+          Math.max(minPrice, Math.min(values[1], maxPrice)),
+        ] as [number, number]
+        if (clamped[0] <= clamped[1]) {
+          setPriceRange(clamped)
+        }
+      }}
+      renderTrack={({ props, children }) => {
+        const [minVal, maxVal] = priceRange
+        const rangePercent = maxPrice !== minPrice
+          ? ((maxVal - minVal) / (maxPrice - minPrice)) * 100
+          : 0
+        const leftPercent = maxPrice !== minPrice
+          ? ((minVal - minPrice) / (maxPrice - minPrice)) * 100
+          : 0
 
-          return (
-            <div
-              {...props}
-              style={{
-                ...props.style,
-                height: '6px',
-                background: '#e5e7eb',
-                borderRadius: '4px',
-                position: 'relative',
-              }}
-              className="mt-2"
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  height: '100%',
-                  backgroundColor: '#093A23',
-                  borderRadius: '4px',
-                  left: `${leftPercent}%`,
-                  width: `${rangePercent}%`,
-                  zIndex: 1,
-                }}
-              />
-              {children}
-            </div>
-          )
-        }}
-        renderThumb={({ props, isDragged }) => (
+        return (
           <div
             {...props}
             style={{
               ...props.style,
+              height: '6px',
+              background: '#e5e7eb',
+              borderRadius: '4px',
+              position: 'relative',
+            }}
+            className="mt-2"
+          >
+            <div
+              style={{
+                position: 'absolute',
+                height: '100%',
+                backgroundColor: '#093A23',
+                borderRadius: '4px',
+                left: `${leftPercent}%`,
+                width: `${rangePercent}%`,
+                zIndex: 1,
+              }}
+            />
+            {children}
+          </div>
+        )
+      }}
+      renderThumb={({ props, isDragged }) => {
+        const { key, ...rest } = props
+        return (
+          <div
+            key={key}
+            {...rest}
+            style={{
+              ...rest.style,
               height: '13px',
               width: '13px',
               backgroundColor: '#093A23',
@@ -230,10 +233,11 @@ export default function ProduitsPage() {
               transition: 'box-shadow 0.2s ease',
             }}
           />
-        )}
-      />
-    </div>
+        )
+      }}
+    />
   </div>
+</div>
 
   {/* Espace (1 colonne) */}
   <div className="col-span-3" />
