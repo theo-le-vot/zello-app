@@ -7,6 +7,94 @@ import ProductModal from '@/components/ProductModal'
 import EditProductModal from '@/components/EditProductModal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { Range } from 'react-range'
+import { 
+  Coffee, ShoppingBag, Utensils, Wine, Cake, Apple, Pizza, 
+  Sandwich, IceCream, Salad, Fish, Beef, Croissant, Cookie,
+  Shirt, Package, Book, Music, Palette, Flower2, Heart,
+  Scissors, Wrench, Hammer, Briefcase, Laptop, Smartphone,
+  Gamepad2, Watch, Gem, Home, Car, Bike, Pill, Dumbbell,
+  Baby, Dog, Cat, Trees, Sparkles, Gift, Star, Circle
+} from 'lucide-react'
+
+// Fonction pour obtenir l'icône appropriée selon le nom et la catégorie
+const getProductIcon = (productName: string, category?: string) => {
+  const name = productName.toLowerCase()
+  const cat = category?.toLowerCase() || ''
+  
+  // Boissons
+  if (name.includes('café') || name.includes('coffee') || name.includes('expresso') || name.includes('cappuccino')) return Coffee
+  if (name.includes('vin') || name.includes('wine') || name.includes('champagne') || name.includes('alcool')) return Wine
+  if (name.includes('jus') || name.includes('boisson') || cat.includes('boisson')) return Coffee
+  
+  // Nourriture
+  if (name.includes('pizza')) return Pizza
+  if (name.includes('sandwich') || name.includes('burger') || name.includes('kebab')) return Sandwich
+  if (name.includes('gâteau') || name.includes('cake') || name.includes('pâtisserie')) return Cake
+  if (name.includes('glace') || name.includes('ice cream') || name.includes('sorbet')) return IceCream
+  if (name.includes('salade') || name.includes('salad')) return Salad
+  if (name.includes('poisson') || name.includes('fish') || name.includes('saumon')) return Fish
+  if (name.includes('viande') || name.includes('beef') || name.includes('steak') || name.includes('poulet')) return Beef
+  if (name.includes('croissant') || name.includes('pain') || name.includes('baguette')) return Croissant
+  if (name.includes('cookie') || name.includes('biscuit')) return Cookie
+  if (name.includes('fruit') || name.includes('pomme') || name.includes('orange')) return Apple
+  if (cat.includes('restauration') || cat.includes('food') || cat.includes('nourriture')) return Utensils
+  
+  // Vêtements
+  if (name.includes('t-shirt') || name.includes('chemise') || name.includes('pull') || name.includes('veste') || cat.includes('vêtement') || cat.includes('textile')) return Shirt
+  if (name.includes('chaussure') || name.includes('basket') || name.includes('sneaker')) return ShoppingBag
+  
+  // Technologie
+  if (name.includes('ordinateur') || name.includes('laptop') || name.includes('pc')) return Laptop
+  if (name.includes('téléphone') || name.includes('smartphone') || name.includes('iphone')) return Smartphone
+  if (name.includes('jeu') || name.includes('game') || name.includes('console')) return Gamepad2
+  if (name.includes('montre') || name.includes('watch')) return Watch
+  
+  // Beauté & Bien-être
+  if (name.includes('parfum') || name.includes('fragrance')) return Sparkles
+  if (name.includes('maquillage') || name.includes('makeup') || cat.includes('beauté')) return Palette
+  if (name.includes('coiffure') || name.includes('cheveux') || name.includes('shampoo')) return Scissors
+  if (name.includes('bijou') || name.includes('jewelry') || name.includes('diamant')) return Gem
+  
+  // Maison & Jardin
+  if (name.includes('fleur') || name.includes('flower') || name.includes('plante')) return Flower2
+  if (name.includes('maison') || name.includes('home') || name.includes('déco')) return Home
+  if (cat.includes('jardin') || cat.includes('garden')) return Trees
+  
+  // Sport & Loisirs
+  if (name.includes('sport') || name.includes('fitness') || name.includes('gym')) return Dumbbell
+  if (name.includes('vélo') || name.includes('bike') || name.includes('cycling')) return Bike
+  if (name.includes('voiture') || name.includes('car') || name.includes('auto')) return Car
+  
+  // Santé
+  if (name.includes('médicament') || name.includes('medicine') || name.includes('pharmacie')) return Pill
+  
+  // Animaux & Bébé
+  if (name.includes('bébé') || name.includes('baby') || name.includes('enfant')) return Baby
+  if (name.includes('chien') || name.includes('dog')) return Dog
+  if (name.includes('chat') || name.includes('cat')) return Cat
+  
+  // Culture
+  if (name.includes('livre') || name.includes('book') || cat.includes('livre')) return Book
+  if (name.includes('musique') || name.includes('music') || name.includes('cd') || name.includes('vinyl')) return Music
+  
+  // Outils & Bricolage
+  if (name.includes('outil') || name.includes('tool') || cat.includes('bricolage')) return Wrench
+  if (name.includes('marteau') || name.includes('hammer')) return Hammer
+  
+  // Cadeaux & Divers
+  if (name.includes('cadeau') || name.includes('gift')) return Gift
+  if (name.includes('star') || name.includes('étoile')) return Star
+  if (name.includes('coeur') || name.includes('heart') || name.includes('amour')) return Heart
+  
+  // Business
+  if (cat.includes('service') || cat.includes('business') || cat.includes('professionnel')) return Briefcase
+  
+  // Fallback par catégorie
+  if (cat.includes('alimentaire') || cat.includes('épicerie')) return ShoppingBag
+  
+  // Icône par défaut
+  return Package
+}
 
 export default function ProduitsPage() {
   const { refreshTrigger } = useStore()
@@ -302,9 +390,11 @@ export default function ProduitsPage() {
                   {images[product.id] ? (
                     <img src={images[product.id]} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                      <span className="text-lg">📷</span>
-                      <span className="text-[8px]">Pas d'image</span>
+                    <div className="absolute inset-0 flex items-center justify-center text-[#093A23]/70">
+                      {(() => {
+                        const Icon = getProductIcon(product.name, product.category)
+                        return <Icon size={28} strokeWidth={1.5} />
+                      })()}
                     </div>
                   )}
                 </div>

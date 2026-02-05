@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import HeaderPro from '@/components/HeaderPro'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import { 
   Plug, 
   Check, 
@@ -13,122 +13,337 @@ import {
   Settings,
   Link as LinkIcon,
   Zap,
-  ShoppingCart
+  ShoppingCart,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Package
 } from 'lucide-react'
 
 interface Integration {
   id: string
+  provider: string
   name: string
   description: string
   logo: string
   category: string
   status: 'available' | 'connected' | 'coming_soon'
-  api_key?: string
+  access_token?: string
+  location_id?: string
+  merchant_name?: string
+  last_sync_at?: string
+}
+
+interface SyncLog {
+  id: string
+  sync_type: string
+  status: string
+  transactions_synced: number
+  created_at: string
+  error_message?: string
 }
 
 export default function IntegrationsPage() {
-  const [integrations, setIntegrations] = useState<Integration[]>([
+  const { activeStoreId, refreshTrigger } = useStore()
+  const [integrations, setIntegrations] = useState<Integration[]>([])
+  const [availableIntegrations] = useState([
     {
-      id: 'square',
+      provider: 'square',
       name: 'Square',
       description: 'Système de caisse et paiement complet',
       logo: '🔲',
-      category: 'Caisse',
-      status: 'available'
+      category: 'Caisse'
     },
     {
-      id: 'sumup',
+      provider: 'sumup',
       name: 'SumUp',
       description: 'Terminal de paiement mobile',
       logo: '💳',
-      category: 'Caisse',
-      status: 'available'
+      category: 'Caisse'
     },
     {
-      id: 'shopify',
-      name: 'Shopify',
-      description: 'Plateforme e-commerce',
-      logo: '🛍️',
-      category: 'E-commerce',
-      status: 'coming_soon'
-    },
-    {
-      id: 'woocommerce',
-      name: 'WooCommerce',
-      description: 'Extension e-commerce WordPress',
-      logo: '🛒',
-      category: 'E-commerce',
-      status: 'coming_soon'
-    },
-    {
-      id: 'lightspeed',
+      provider: 'lightspeed',
       name: 'Lightspeed',
       description: 'Solution de point de vente',
       logo: '⚡',
-      category: 'Caisse',
-      status: 'available'
-    },
-    {
-      id: 'izettle',
-      name: 'iZettle',
-      description: 'Système de paiement mobile',
-      logo: '📱',
-      category: 'Caisse',
-      status: 'available'
+      category: 'Caisse'
     }
   ])
 
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null)
-  const [apiKey, setApiKey] = useState('')
-  const [webhookUrl, setWebhookUrl] = useState('')
+  const [accessToken, setAccessToken] = useState('')
+  const [locationId, setLocationId] = useState('')
+  const [locations, setLocations] = useState<any[]>([])
+  const [merchantInfo, setMerchantInfo] = useState<any>(null)
   const [showConfigModal, setShowConfigModal] = useState(false)
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle')
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'testing' | 'syncing' | 'success' | 'error'>('idle')
+  const [syncMessage, setSyncMessage] = useState('')
+  const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
+  const [totalSynced, setTotalSynced] = useState(0)
 
-  const handleConnect = (integration: Integration) => {
+  // Charger les intégrations depuis Supabase
+  useEffect(() => {
+    fetchIntegrations()
+    fetchSyncLogs()
+  }, [activeStoreId, refreshTrigger])
+
+  const fetchIntegrations = async () => {
+    if (!activeStoreId) return
+
+    const { data, error } = await supabase
+      .from('integrations')
+      .select('*')
+      .eq('store_id', activeStoreId)
+
+    if (error) {
+      console.error('Erreur chargement intégrations:', error)
+      return
+    }
+
+    // Merger avec les intégrations disponibles
+    const mergedIntegrations = availableIntegrations.map(available => {
+      const connected = data?.find(d => d.provider === available.provider)
+      return {
+        id: connected?.id || available.provider,
+        provider: available.provider,
+        name: available.name,
+        description: available.description,
+        logo: available.logo,
+        category: available.category,
+        status: connected ? 'connected' as const : 'available' as const,
+        access_token: connected?.access_token,
+        location_id: connected?.location_id,
+        merchant_name: connected?.merchant_name,
+        last_sync_at: connected?.last_sync_at
+      }
+    })
+
+    setIntegrations(mergedIntegrations)
+
+    // Calculer le total synchronisé
+    const total = data?.reduce((sum, int) => sum + (int.sync_count || 0), 0) || 0
+    setTotalSynced(total)
+  }
+
+  const fetchSyncLogs = async () => {
+    if (!activeStoreId) return
+
+    const { data: integrationsData } = await supabase
+      .from('integrations')
+      .select('id')
+      .eq('store_id', activeStoreId)
+
+    if (!integrationsData || integrationsData.length === 0) return
+
+    const integrationIds = integrationsData.map(i => i.id)
+
+    const { data: logs } = await supabase
+      .from('integration_sync_logs')
+      .select('*')
+      .in('integration_id', integrationIds)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (logs) {
+      setSyncLogs(logs)
+    }
+  }
+
+  const handleConnect = async (integration: Integration) => {
     setSelectedIntegration(integration)
     setShowConfigModal(true)
-    setWebhookUrl(`https://api.zello.fr/webhook/${integration.id}`)
+    setAccessToken(integration.access_token || '')
+    setLocationId(integration.location_id || '')
+    setLocations([])
+    setMerchantInfo(null)
+    setSyncStatus('idle')
+    setSyncMessage('')
+  }
+
+  const handleTestConnection = async () => {
+    if (!accessToken || selectedIntegration?.provider !== 'square') return
+
+    setSyncStatus('testing')
+    setSyncMessage('Test de connexion...')
+
+    try {
+      const response = await fetch('/api/integrations/square/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setMerchantInfo(data.merchant)
+        setLocations(data.locations)
+        setSyncStatus('success')
+        setSyncMessage('✅ Connexion réussie !')
+        
+        // Auto-sélectionner la première location si une seule
+        if (data.locations.length === 1) {
+          setLocationId(data.locations[0].id)
+        }
+      } else {
+        setSyncStatus('error')
+        setSyncMessage('❌ ' + (data.error || 'Erreur de connexion'))
+      }
+    } catch (error: any) {
+      setSyncStatus('error')
+      setSyncMessage('❌ Erreur: ' + error.message)
+    }
   }
 
   const handleSaveIntegration = async () => {
-    if (!selectedIntegration) return
+    if (!selectedIntegration || !activeStoreId || !accessToken) return
+    if (selectedIntegration.provider === 'square' && !locationId) {
+      setSyncMessage('⚠️ Veuillez sélectionner un point de vente')
+      return
+    }
 
     setSyncStatus('syncing')
-    
-    // Simuler la sauvegarde
-    setTimeout(() => {
-      const updatedIntegrations = integrations.map(int => 
-        int.id === selectedIntegration.id 
-          ? { ...int, status: 'connected' as const, api_key: apiKey }
-          : int
-      )
-      setIntegrations(updatedIntegrations)
+    setSyncMessage('Enregistrement...')
+
+    try {
+      // Sauvegarder ou mettre à jour l'intégration
+      const integrationData = {
+        store_id: activeStoreId,
+        provider: selectedIntegration.provider,
+        status: 'connected',
+        access_token: accessToken,
+        location_id: locationId,
+        merchant_name: merchantInfo?.business_name,
+        merchant_id: merchantInfo?.id,
+        sync_enabled: true,
+        sync_transactions: true,
+        sync_products: true,
+        sync_customers: true
+      }
+
+      const { error } = await supabase
+        .from('integrations')
+        .upsert(integrationData, {
+          onConflict: 'store_id,provider'
+        })
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
       setSyncStatus('success')
+      setSyncMessage('✅ Intégration enregistrée !')
+      
       setTimeout(() => {
         setShowConfigModal(false)
+        fetchIntegrations()
         setSyncStatus('idle')
-        setApiKey('')
       }, 1500)
-    }, 2000)
+
+    } catch (error: any) {
+      setSyncStatus('error')
+      setSyncMessage('❌ Erreur: ' + error.message)
+    }
   }
 
-  const handleDisconnect = (integrationId: string) => {
-    const updatedIntegrations = integrations.map(int => 
-      int.id === integrationId 
-        ? { ...int, status: 'available' as const, api_key: undefined }
-        : int
-    )
-    setIntegrations(updatedIntegrations)
+  const handleDisconnect = async (integration: Integration) => {
+    if (!activeStoreId || !confirm('Voulez-vous vraiment déconnecter cette intégration ?')) return
+
+    try {
+      await supabase
+        .from('integrations')
+        .delete()
+        .eq('store_id', activeStoreId)
+        .eq('provider', integration.provider)
+
+      fetchIntegrations()
+    } catch (error) {
+      console.error('Erreur déconnexion:', error)
+    }
   }
 
-  const handleSync = async () => {
+  const handleSync = async (integration: Integration) => {
+    if (!activeStoreId || !integration.access_token) return
+
     setSyncStatus('syncing')
-    
-    // Simuler la synchronisation
-    setTimeout(() => {
-      setSyncStatus('success')
-      setTimeout(() => setSyncStatus('idle'), 2000)
-    }, 2000)
+    setSyncMessage('Synchronisation en cours...')
+
+    try {
+      const endDate = new Date().toISOString()
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // 30 jours
+
+      const response = await fetch('/api/integrations/square/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: activeStoreId,
+          accessToken: integration.access_token,
+          locationId: integration.location_id,
+          startDate,
+          endDate
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setSyncStatus('success')
+        setSyncMessage(`✅ ${data.synced} transactions synchronisées !`)
+        fetchIntegrations()
+        fetchSyncLogs()
+        
+        setTimeout(() => {
+          setSyncStatus('idle')
+        }, 3000)
+      } else {
+        setSyncStatus('error')
+        setSyncMessage('❌ ' + (data.error || 'Erreur de synchronisation'))
+      }
+    } catch (error: any) {
+      setSyncStatus('error')
+      setSyncMessage('❌ Erreur: ' + error.message)
+    }
+  }
+
+  const handleImportCatalog = async (integration: Integration) => {
+    if (!activeStoreId || !integration.access_token) return
+
+    if (!confirm('Voulez-vous importer le catalogue de produits depuis Square ? Les produits existants seront mis à jour.')) {
+      return
+    }
+
+    setSyncStatus('syncing')
+    setSyncMessage('Import du catalogue en cours...')
+
+    try {
+      const response = await fetch('/api/integrations/square/import-catalog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: activeStoreId,
+          accessToken: integration.access_token
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setSyncStatus('success')
+        setSyncMessage(`✅ ${data.imported} produits importés, ${data.updated} mis à jour !`)
+        fetchIntegrations()
+        fetchSyncLogs()
+        
+        setTimeout(() => {
+          setSyncStatus('idle')
+        }, 4000)
+      } else {
+        setSyncStatus('error')
+        setSyncMessage('❌ ' + (data.error || 'Erreur d\'import'))
+      }
+    } catch (error: any) {
+      setSyncStatus('error')
+      setSyncMessage('❌ Erreur: ' + error.message)
+    }
   }
 
   return (
@@ -171,38 +386,77 @@ export default function IntegrationsPage() {
               <ShoppingCart className="text-purple-600" size={20} />
             </div>
             <div className="text-3xl font-bold text-gray-900">
-              1,247
+              {totalSynced}
             </div>
           </div>
         </div>
 
-        {/* Bouton de synchronisation manuelle */}
-        <div className="mb-8 bg-green-50 border border-green-200 rounded-xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-1">
-                Synchronisation automatique
-              </h3>
-              <p className="text-sm text-gray-600">
-                Les ventes sont synchronisées en temps réel depuis vos systèmes connectés
-              </p>
+        {/* Bouton de synchronisation manuelle + Message */}
+        {integrations.some(i => i.status === 'connected') && (
+          <>
+            {/* Import du catalogue */}
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                    <Package size={20} className="text-blue-600" />
+                    Import du catalogue produits
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Importez tous vos produits depuis Square pour créer un lien permanent entre les deux systèmes
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    const connectedIntegration = integrations.find(i => i.status === 'connected')
+                    if (connectedIntegration) handleImportCatalog(connectedIntegration)
+                  }}
+                  disabled={syncStatus === 'syncing'}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                >
+                  <ShoppingCart size={20} />
+                  Importer catalogue
+                </button>
+              </div>
             </div>
-            <button
-              onClick={handleSync}
-              disabled={syncStatus === 'syncing'}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-            >
-              <RefreshCw size={20} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
-              {syncStatus === 'syncing' ? 'Synchronisation...' : 'Synchroniser'}
-            </button>
+
+            {/* Synchronisation des ventes */}
+          <div className="mb-8 bg-green-50 border border-green-200 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Synchronisation des données
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Importez les ventes des 30 derniers jours depuis vos systèmes connectés
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const connectedIntegration = integrations.find(i => i.status === 'connected')
+                  if (connectedIntegration) handleSync(connectedIntegration)
+                }}
+                disabled={syncStatus === 'syncing'}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                <RefreshCw size={20} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
+                {syncStatus === 'syncing' ? 'Synchronisation...' : 'Synchroniser'}
+              </button>
+            </div>
+            {syncMessage && (
+              <div className={`mt-4 flex items-center gap-2 ${
+                syncStatus === 'success' ? 'text-green-700' : 
+                syncStatus === 'error' ? 'text-red-700' : 'text-blue-700'
+              }`}>
+                {syncStatus === 'success' && <Check size={20} />}
+                {syncStatus === 'error' && <XCircle size={20} />}
+                {syncStatus === 'syncing' && <RefreshCw size={20} className="animate-spin" />}
+                <span className="font-medium">{syncMessage}</span>
+              </div>
+            )}
           </div>
-          {syncStatus === 'success' && (
-            <div className="mt-4 flex items-center gap-2 text-green-700">
-              <Check size={20} />
-              <span className="font-medium">Synchronisation réussie !</span>
-            </div>
-          )}
-        </div>
+          </>
+        )}
 
         {/* Liste des intégrations */}
         <div className="mb-6">
@@ -261,7 +515,7 @@ export default function IntegrationsPage() {
                       Configurer
                     </button>
                     <button
-                      onClick={() => handleDisconnect(integration.id)}
+                      onClick={() => handleDisconnect(integration)}
                       className="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-semibold hover:bg-red-200 transition-colors"
                     >
                       <X size={16} />
@@ -323,113 +577,136 @@ export default function IntegrationsPage() {
                   <div className="flex gap-3">
                     <AlertCircle className="text-blue-600 flex-shrink-0" size={20} />
                     <div className="text-sm text-blue-900">
-                      <p className="font-semibold mb-1">Instructions</p>
-                      <ol className="list-decimal list-inside space-y-1">
-                        <li>Connectez-vous à votre compte {selectedIntegration.name}</li>
-                        <li>Accédez aux paramètres API</li>
-                        <li>Générez une nouvelle clé API</li>
-                        <li>Copiez la clé et collez-la ci-dessous</li>
+                      <p className="font-semibold mb-1">Comment obtenir votre clé API {selectedIntegration.name} ?</p>
+                      <ol className="list-decimal list-inside space-y-1 mt-2">
+                        <li>Connectez-vous à votre <a href="https://squareup.com/dashboard" target="_blank" className="underline">tableau de bord Square</a></li>
+                        <li>Allez dans <strong>Apps & Integrations → API → My Applications</strong></li>
+                        <li>Créez une nouvelle application ou sélectionnez-en une existante</li>
+                        <li>Copiez votre <strong>Access Token</strong> (Production ou Sandbox)</li>
                       </ol>
                     </div>
                   </div>
                 </div>
 
-                {/* API Key */}
+                {/* Access Token */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Clé API
+                    Access Token Square *
                   </label>
                   <input
-                    type="text"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="sk_live_..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none"
+                    type="password"
+                    value={accessToken}
+                    onChange={(e) => setAccessToken(e.target.value)}
+                    placeholder="EAAAl..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none font-mono text-sm"
                   />
-                </div>
-
-                {/* Webhook URL */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    URL du Webhook
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={webhookUrl}
-                      readOnly
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
-                    />
-                    <button
-                      onClick={() => navigator.clipboard.writeText(webhookUrl)}
-                      className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
-                    >
-                      Copier
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Ajoutez cette URL dans les paramètres webhook de {selectedIntegration.name}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Commence généralement par "EAAAl" (Production) ou "EAAA" (Sandbox)
                   </p>
                 </div>
 
-                {/* Paramètres de synchronisation */}
+                {/* Test de connexion */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    Synchroniser
-                  </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3">
-                      <input type="checkbox" defaultChecked className="w-5 h-5 text-green-600" />
-                      <span className="text-gray-700">Ventes et transactions</span>
-                    </label>
-                    <label className="flex items-center gap-3">
-                      <input type="checkbox" defaultChecked className="w-5 h-5 text-green-600" />
-                      <span className="text-gray-700">Informations clients</span>
-                    </label>
-                    <label className="flex items-center gap-3">
-                      <input type="checkbox" defaultChecked className="w-5 h-5 text-green-600" />
-                      <span className="text-gray-700">Inventaire produits</span>
-                    </label>
-                  </div>
+                  <button
+                    onClick={handleTestConnection}
+                    disabled={!accessToken || syncStatus === 'testing'}
+                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {syncStatus === 'testing' ? (
+                      <>
+                        <RefreshCw size={18} className="animate-spin" />
+                        Test en cours...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={18} />
+                        Tester la connexion
+                      </>
+                    )}
+                  </button>
                 </div>
 
-                {/* Status de synchronisation */}
-                {syncStatus === 'syncing' && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center gap-3">
-                      <RefreshCw className="text-blue-600 animate-spin" size={20} />
-                      <span className="text-blue-900 font-medium">
-                        Configuration en cours...
-                      </span>
+                {/* Informations du marchand */}
+                {merchantInfo && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={20} />
+                      <div className="flex-1">
+                        <p className="font-semibold text-green-900 mb-2">Connexion réussie !</p>
+                        <div className="text-sm text-green-800 space-y-1">
+                          <p><strong>Commerce :</strong> {merchantInfo.business_name}</p>
+                          <p><strong>ID :</strong> {merchantInfo.id}</p>
+                          <p><strong>Pays :</strong> {merchantInfo.country}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {syncStatus === 'success' && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                {/* Sélection du point de vente */}
+                {locations.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Point de vente (Location) *
+                    </label>
+                    <select
+                      value={locationId}
+                      onChange={(e) => setLocationId(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none"
+                    >
+                      <option value="">Sélectionnez un point de vente</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name} {loc.address && `- ${loc.address}`}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Les transactions seront importées depuis ce point de vente
+                    </p>
+                  </div>
+                )}
+
+                {/* Message de statut */}
+                {syncMessage && syncStatus !== 'testing' && (
+                  <div className={`rounded-lg p-4 ${
+                    syncStatus === 'success' ? 'bg-green-50 border border-green-200' :
+                    syncStatus === 'error' ? 'bg-red-50 border border-red-200' :
+                    'bg-blue-50 border border-blue-200'
+                  }`}>
                     <div className="flex items-center gap-3">
-                      <Check className="text-green-600" size={20} />
-                      <span className="text-green-900 font-medium">
-                        Connexion établie avec succès !
+                      {syncStatus === 'success' && <Check className="text-green-600" size={20} />}
+                      {syncStatus === 'error' && <XCircle className="text-red-600" size={20} />}
+                      {syncStatus === 'syncing' && <RefreshCw className="text-blue-600 animate-spin" size={20} />}
+                      <span className={`font-medium ${
+                        syncStatus === 'success' ? 'text-green-900' :
+                        syncStatus === 'error' ? 'text-red-900' :
+                        'text-blue-900'
+                      }`}>
+                        {syncMessage}
                       </span>
                     </div>
                   </div>
                 )}
 
                 {/* Boutons d'action */}
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-3 pt-4 border-t">
                   <button
-                    onClick={() => setShowConfigModal(false)}
+                    onClick={() => {
+                      setShowConfigModal(false)
+                      setSyncStatus('idle')
+                      setSyncMessage('')
+                    }}
                     className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
                   >
                     Annuler
                   </button>
                   <button
                     onClick={handleSaveIntegration}
-                    disabled={!apiKey || syncStatus === 'syncing'}
+                    disabled={!accessToken || !locationId || syncStatus === 'syncing' || !merchantInfo}
                     className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {selectedIntegration.status === 'connected' ? 'Mettre à jour' : 'Connecter'}
+                    {selectedIntegration.status === 'connected' ? 'Mettre à jour' : 'Enregistrer l\'intégration'}
                   </button>
                 </div>
               </div>
