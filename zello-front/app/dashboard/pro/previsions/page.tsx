@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import { 
   TrendingUp, 
   Calendar,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react'
 
 export default function PrevisionsPage() {
+  const { refreshTrigger } = useStore()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null)
@@ -32,7 +34,7 @@ export default function PrevisionsPage() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [refreshTrigger])
 
   const fetchData = async () => {
     setLoading(true)

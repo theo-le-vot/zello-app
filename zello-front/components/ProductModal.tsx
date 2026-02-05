@@ -132,11 +132,15 @@ export default function ProductModal({ isOpen, onClose, onProductAdded }: Produc
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
-        <h2 className="text-lg font-semibold mb-4">Ajouter un produit</h2>
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg relative animate-in fade-in duration-200">
+        {/* Header */}
+        <div className="border-b border-gray-100 px-6 py-4">
+          <h2 className="text-xl font-semibold text-[#093A23]">Ajouter un produit</h2>
+        </div>
 
-        <div className="space-y-4">
+        {/* Content */}
+        <div className="px-6 py-5 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
           {/* Nom du produit */}
           <div className="relative">
             <input
@@ -146,13 +150,13 @@ export default function ProductModal({ isOpen, onClose, onProductAdded }: Produc
               placeholder=" "
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
-              className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
+              className="peer h-12 w-full border border-gray-300 rounded-lg px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23] focus:ring-2 focus:ring-[#093A23]/10 transition-all"
             />
             <label
               htmlFor="product-name"
-              className="absolute left-4 text-gray-500 text-sm transition-all font-medium
+              className="absolute left-4 text-gray-500 text-sm transition-all font-medium pointer-events-none
                 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
-                peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23]"
+                peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23] top-1"
             >
               Nom du produit *
             </label>
@@ -160,91 +164,121 @@ export default function ProductModal({ isOpen, onClose, onProductAdded }: Produc
 
           {/* Description */}
           <div className="relative">
-            <input
-              type="text"
+            <textarea
               id="product-description"
               placeholder=" "
+              rows={2}
               value={form.description}
               onChange={e => setForm({ ...form, description: e.target.value })}
-              className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
+              className="peer w-full border border-gray-300 rounded-lg px-4 pt-5 pb-2 placeholder-transparent focus:outline-none focus:border-[#093A23] focus:ring-2 focus:ring-[#093A23]/10 transition-all resize-none"
             />
             <label
               htmlFor="product-description"
-              className="absolute left-4 text-gray-500 text-sm transition-all font-medium
+              className="absolute left-4 text-gray-500 text-sm transition-all font-medium pointer-events-none
                 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
-                peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23]"
+                peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23] top-1"
             >
               Description
             </label>
           </div>
 
-          {/* Prix */}
-          <div className="relative">
-            <input
-              type="number"
-              id="product-price"
-              required
-              placeholder=" "
-              value={form.price}
-              onChange={e => setForm({ ...form, price: e.target.value })}
-              className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
-            />
-            <label
-              htmlFor="product-price"
-              className="absolute left-4 text-gray-500 text-sm transition-all font-medium
-                peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
-                peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23]"
-            >
-              Prix (€) *
-            </label>
-          </div>
+          {/* Prix et Catégorie côte à côte */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Prix */}
+            <div className="relative">
+              <input
+                type="number"
+                step="0.01"
+                id="product-price"
+                required
+                placeholder=" "
+                value={form.price}
+                onChange={e => setForm({ ...form, price: e.target.value })}
+                className="peer h-12 w-full border border-gray-300 rounded-lg px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23] focus:ring-2 focus:ring-[#093A23]/10 transition-all"
+              />
+              <label
+                htmlFor="product-price"
+                className="absolute left-4 text-gray-500 text-sm transition-all font-medium pointer-events-none
+                  peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
+                  peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23] top-1"
+              >
+                Prix (€) *
+              </label>
+            </div>
 
-          {/* Catégorie */}
-          <div className="relative">
-            <input
-              type="text"
-              id="product-category"
-              placeholder=" "
-              value={form.category}
-              onChange={e => setForm({ ...form, category: e.target.value })}
-              className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
-            />
-            <label
-              htmlFor="product-category"
-              className="absolute left-4 text-gray-500 text-sm transition-all font-medium
-                peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
-                peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23]"
-            >
-              Catégorie
-            </label>
+            {/* Catégorie */}
+            <div className="relative">
+              <input
+                type="text"
+                id="product-category"
+                placeholder=" "
+                value={form.category}
+                onChange={e => setForm({ ...form, category: e.target.value })}
+                className="peer h-12 w-full border border-gray-300 rounded-lg px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23] focus:ring-2 focus:ring-[#093A23]/10 transition-all"
+              />
+              <label
+                htmlFor="product-category"
+                className="absolute left-4 text-gray-500 text-sm transition-all font-medium pointer-events-none
+                  peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
+                  peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23] top-1"
+              >
+                Catégorie
+              </label>
+            </div>
           </div>
 
           {/* Image */}
-          <div className="flex items-center gap-4">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              ref={fileInputRef}
-              className="text-sm"
-            />
-            {previewUrl && (
-              <img src={previewUrl} alt="Aperçu" className="w-12 h-12 object-cover rounded" />
-            )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Image du produit
+            </label>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-[#093A23] hover:text-[#093A23] transition-all"
+              >
+                {form.imageFile ? 'Changer l\'image' : 'Choisir une image'}
+              </button>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                ref={fileInputRef}
+                className="hidden"
+              />
+              {previewUrl && (
+                <div className="relative">
+                  <img src={previewUrl} alt="Aperçu" className="w-16 h-16 object-cover rounded-lg border-2 border-gray-200" />
+                  <button
+                    onClick={() => {
+                      setForm(prev => ({ ...prev, imageFile: null }))
+                      setPreviewUrl(null)
+                    }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Boutons */}
-        <div className="flex justify-end gap-4 mt-6">
-          <button onClick={onClose} className="px-4 py-2 rounded bg-gray-200 text-sm font-medium">
+        {/* Footer */}
+        <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
+          <button 
+            onClick={onClose} 
+            className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          >
             Annuler
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 rounded bg-[#093A23] text-white text-sm font-medium"
+            className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#093A23] to-[#0d5534] hover:from-[#0b472c] hover:to-[#106640] text-white text-sm font-medium transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
-            {loading ? 'Ajout...' : 'Ajouter'}
+            {loading ? 'Ajout en cours...' : 'Ajouter le produit'}
           </button>
         </div>
       </div>

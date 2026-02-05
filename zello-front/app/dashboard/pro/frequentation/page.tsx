@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts'
 
 interface FrequentationStats {
@@ -15,6 +16,7 @@ interface FrequentationStats {
 }
 
 export default function FrequentationPage() {
+  const { refreshTrigger } = useStore()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'7d' | '30d' | '3m' | '6m' | '1y' | 'custom'>('30d')
@@ -321,7 +323,7 @@ export default function FrequentationPage() {
 
   useEffect(() => {
     fetchFrequentationData()
-  }, [period, compareMode, customStartDate, customEndDate])
+  }, [refreshTrigger, period, compareMode, customStartDate, customEndDate])
 
   const calculateVariation = (current: number, previous: number) => {
     if (previous === 0) return 0

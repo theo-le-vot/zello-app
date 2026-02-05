@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 interface ClientStat {
@@ -20,6 +21,7 @@ interface ClientStat {
 }
 
 export default function TopClientsPage() {
+  const { refreshTrigger } = useStore()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [clients, setClients] = useState<ClientStat[]>([])
@@ -223,7 +225,7 @@ export default function TopClientsPage() {
 
   useEffect(() => {
     fetchClientsData()
-  }, [period])
+  }, [refreshTrigger, period])
 
   useEffect(() => {
     // Filtrer et trier
@@ -328,7 +330,7 @@ export default function TopClientsPage() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
                 outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"

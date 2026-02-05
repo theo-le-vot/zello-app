@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import AddVenteModal from '@/components/AddVenteModal'
 import VenteDetailModal from '@/components/VenteDetailModal'
 import { Range } from 'react-range'
@@ -30,6 +31,7 @@ interface Vente {
 }
 
 export default function VentesPage() {
+  const { refreshTrigger } = useStore()
   const [ventes, setVentes] = useState<Vente[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [detailModalOpen, setDetailModalOpen] = useState(false)
@@ -124,7 +126,7 @@ export default function VentesPage() {
 
   useEffect(() => {
     fetchVentes()
-  }, [])
+  }, [refreshTrigger])
 
   const filteredVentes = ventes
     .filter(v => !typeFilter || v.transaction_type?.code === typeFilter)

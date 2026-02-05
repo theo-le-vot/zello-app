@@ -42,36 +42,72 @@ export default function AddClientModal({ isOpen, onClose, onSuccess }: AddClient
     }
 
     try {
-      // Étape 1 – Créer le client dans la table customers (sans lien avec auth)
-      const { data: newCustomer, error: insertCustomerError } = await supabase
+      // Étape 1 – Vérifier si le client existe déjà (par email)
+      const { data: existingCustomer, error: searchError } = await supabase
         .from('customers')
-        .insert({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          phone_number: phone,
-        })
-        .select()
-        .single()
+        .select('id')
+        .eq('email', email)
+        .maybeSingle()
 
-      if (insertCustomerError) {
-        console.error('Erreur insertion customer:', insertCustomerError)
-        setError("Erreur lors de l'ajout du client : " + insertCustomerError.message)
+      if (searchError) {
+        console.error('Erreur recherche client:', searchError)
+        setError("Erreur lors de la recherche du client : " + searchError.message)
         setLoading(false)
         return
       }
 
-      if (!newCustomer) {
-        setError("Client non créé.")
-        setLoading(false)
-        return
+      let customerId: string
+
+      if (existingCustomer) {
+        // Le client existe déjà, vérifier s'il est déjà lié à cette boutique
+        const { data: existingRelation } = await supabase
+          .from('customers_stores')
+          .select('id')
+          .eq('customer_id', existingCustomer.id)
+          .eq('store_id', storeId)
+          .maybeSingle()
+
+        if (existingRelation) {
+          setError("Ce client est déjà enregistré dans votre boutique.")
+          setLoading(false)
+          return
+        }
+
+        customerId = existingCustomer.id
+      } else {
+        // Étape 2 – Créer le client dans la table customers
+        const { data: newCustomer, error: insertCustomerError } = await supabase
+          .from('customers')
+          .insert({
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            phone_number: phone,
+          })
+          .select()
+          .single()
+
+        if (insertCustomerError) {
+          console.error('Erreur insertion customer:', insertCustomerError)
+          setError("Erreur lors de l'ajout du client : " + insertCustomerError.message)
+          setLoading(false)
+          return
+        }
+
+        if (!newCustomer) {
+          setError("Client non créé.")
+          setLoading(false)
+          return
+        }
+
+        customerId = newCustomer.id
       }
 
-      // Étape 2 – Ajouter la relation avec la boutique
+      // Étape 3 – Ajouter la relation avec la boutique
       const { error: relError } = await supabase
         .from('customers_stores')
         .insert({
-          customer_id: newCustomer.id,
+          customer_id: customerId,
           store_id: storeId,
           join_date: new Date().toISOString().slice(0, 10),
           points: 0,
@@ -104,9 +140,9 @@ export default function AddClientModal({ isOpen, onClose, onSuccess }: AddClient
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-md p-6 rounded-lg shadow-lg">
-        <h2 className="text-xl font-bold mb-4">Ajouter un client</h2>
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white w-full max-w-md p-6 rounded-xl shadow-xl border border-gray-200/60" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900">Ajouter un client</h2>
 
         <div className="space-y-3">
           <input
@@ -114,44 +150,44 @@ export default function AddClientModal({ isOpen, onClose, onSuccess }: AddClient
             placeholder="Prénom"
             value={firstName}
             onChange={e => setFirstName(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border border-gray-200 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#093A23]/10 text-sm"
           />
           <input
             type="text"
             placeholder="Nom"
             value={lastName}
             onChange={e => setLastName(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border border-gray-200 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#093A23]/10 text-sm"
           />
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border border-gray-200 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#093A23]/10 text-sm"
           />
           <input
             type="tel"
             placeholder="Téléphone"
             value={phone}
             onChange={e => setPhone(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
+            className="w-full border border-gray-200 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#093A23]/10 text-sm"
           />
         </div>
 
         {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
 
-        <div className="flex justify-end mt-6 space-x-2">
+        <div className="flex justify-end mt-6 gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 border rounded text-gray-600 hover:text-black"
+            className="px-4 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors"
             disabled={loading}
           >
             Annuler
           </button>
           <button
             onClick={handleAdd}
-            className="px-4 py-2 bg-[#093A23] text-white rounded hover:bg-[#0b472c]"
+            className="px-4 py-2 bg-[#093A23] text-white rounded-lg hover:bg-[#0b472c] text-sm font-medium transition-colors"
             disabled={loading}
           >
             {loading ? 'Ajout...' : 'Ajouter'}

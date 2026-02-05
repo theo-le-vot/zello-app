@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 interface ProductStat {
@@ -23,6 +24,7 @@ interface ProductStat {
 }
 
 export default function AnalyseProduitsPage() {
+  const { refreshTrigger } = useStore()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [products, setProducts] = useState<ProductStat[]>([])
@@ -311,7 +313,7 @@ export default function AnalyseProduitsPage() {
 
   useEffect(() => {
     fetchProductsData()
-  }, [period])
+  }, [refreshTrigger, period])
 
   useEffect(() => {
     // Filtrer et trier
@@ -444,7 +446,7 @@ export default function AnalyseProduitsPage() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
                 outerRadius={100}
                 fill="#8884d8"
                 dataKey="revenue"
@@ -468,7 +470,7 @@ export default function AnalyseProduitsPage() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
                 outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 interface PeriodStats {
@@ -20,6 +21,7 @@ interface ProductStat {
 }
 
 export default function PerformancePage() {
+  const { refreshTrigger } = useStore()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'7d' | '30d' | '3m' | '6m' | '1y' | 'custom'>('30d')
@@ -272,7 +274,7 @@ export default function PerformancePage() {
 
   useEffect(() => {
     fetchPerformanceData()
-  }, [period, compareMode, customStartDate, customEndDate])
+  }, [refreshTrigger, period, compareMode, customStartDate, customEndDate])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value)
@@ -430,7 +432,7 @@ export default function PerformancePage() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"

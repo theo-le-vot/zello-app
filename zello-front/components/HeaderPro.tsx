@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import LogoZ from '/public/logo-z.svg'
 import { 
   ChevronDown, 
@@ -36,6 +37,8 @@ interface Store {
 }
 
 export default function HeaderPro() {
+  const { setActiveStoreId } = useStore()
+  
   const [userData, setUserData] = useState<{
     id: string
     first_name: string
@@ -159,15 +162,9 @@ export default function HeaderPro() {
   const handleStoreSelect = async (store: Store) => {
     setActiveStore(store)
     setStoreMenuOpen(false)
-
-    if (userData?.id) {
-      const { error } = await supabase
-        .from('users')
-        .update({ active_store_id: store.id })
-        .eq('id', userData.id)
-
-      if (error) console.error("Erreur mise à jour active_store_id:", error)
-    }
+    
+    // Notifier le contexte du changement de boutique
+    setActiveStoreId(store.id)
   }
 
   const handleLogout = async () => {

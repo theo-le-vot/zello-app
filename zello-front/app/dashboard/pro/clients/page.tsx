@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import { Range } from 'react-range'
 import AddClientModal from '@/components/AddClientModal'
 import { Users, Plus, Search, Filter, UserCheck, Star, Calendar, TrendingUp, Mail, Phone, Eye } from 'lucide-react'
@@ -35,6 +36,7 @@ interface ClientStats {
 }
 
 export default function ClientsPage() {
+  const { refreshTrigger } = useStore()
   const [clients, setClients] = useState<Client[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOption, setSortOption] = useState('')
@@ -155,7 +157,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchClients()
-  }, [])
+  }, [refreshTrigger])
 
   const getClientStatus = (client: Client): 'active' | 'inactive' => {
     if (!client.last_visit_at) return 'inactive'
@@ -234,41 +236,41 @@ export default function ClientsPage() {
         <>
       
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-[#093A23] to-[#0d5534] text-white p-6 rounded-xl shadow-lg">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-[#093A23] to-[#0d5534] text-white p-4 rounded-xl shadow-lg">
           <div className="flex items-center justify-between mb-2">
-            <Users size={24} />
-            <span className="text-sm opacity-90">Total</span>
+            <Users size={20} />
+            <span className="text-xs opacity-90">Total</span>
           </div>
-          <div className="text-3xl font-bold">{stats.total}</div>
-          <div className="text-sm opacity-90 mt-1">Clients</div>
+          <div className="text-2xl font-bold">{stats.total}</div>
+          <div className="text-xs opacity-90 mt-1">Clients</div>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-4 rounded-xl shadow-lg">
           <div className="flex items-center justify-between mb-2">
-            <UserCheck size={24} />
-            <span className="text-sm opacity-90">Actifs</span>
+            <UserCheck size={20} />
+            <span className="text-xs opacity-90">Actifs</span>
           </div>
-          <div className="text-3xl font-bold">{stats.active}</div>
-          <div className="text-sm opacity-90 mt-1">Visite &lt; 30j</div>
+          <div className="text-2xl font-bold">{stats.active}</div>
+          <div className="text-xs opacity-90 mt-1">Visite &lt; 30j</div>
         </div>
 
-        <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-xl shadow-lg">
+        <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-4 rounded-xl shadow-lg">
           <div className="flex items-center justify-between mb-2">
-            <Star size={24} />
-            <span className="text-sm opacity-90">Points</span>
+            <Star size={20} />
+            <span className="text-xs opacity-90">Points</span>
           </div>
-          <div className="text-3xl font-bold">{stats.totalPoints.toLocaleString()}</div>
-          <div className="text-sm opacity-90 mt-1">Moy: {stats.averagePoints} pts</div>
+          <div className="text-2xl font-bold">{stats.totalPoints.toLocaleString()}</div>
+          <div className="text-xs opacity-90 mt-1">Moy: {stats.averagePoints} pts</div>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-xl shadow-lg">
           <div className="flex items-center justify-between mb-2">
-            <TrendingUp size={24} />
-            <span className="text-sm opacity-90">VIP</span>
+            <TrendingUp size={20} />
+            <span className="text-xs opacity-90">VIP</span>
           </div>
-          <div className="text-3xl font-bold">{stats.vip}</div>
-          <div className="text-sm opacity-90 mt-1">{stats.total > 0 ? Math.round((stats.vip / stats.total) * 100) : 0}% des clients</div>
+          <div className="text-2xl font-bold">{stats.vip}</div>
+          <div className="text-xs opacity-90 mt-1">{stats.total > 0 ? Math.round((stats.vip / stats.total) * 100) : 0}% des clients</div>
         </div>
       </div>
 

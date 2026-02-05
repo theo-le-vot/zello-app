@@ -2,17 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import ProductModal from '@/components/ProductModal'
 import EditProductModal from '@/components/EditProductModal'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { Range } from 'react-range'
 
 export default function ProduitsPage() {
+  const { refreshTrigger } = useStore()
   const [products, setProducts] = useState<any[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null)
-  const [activeMenuProductId, setActiveMenuProductId] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -23,8 +24,6 @@ export default function ProduitsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategories, setFilterCategories] = useState<string[]>([])
   const [sortOption, setSortOption] = useState('')
-
-  const menuRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const fetchImage = async (path: string, productId: string) => {
     const { data, error } = await supabase.storage.from('product-images').download(path)
@@ -77,22 +76,8 @@ export default function ProduitsPage() {
   }
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        activeMenuProductId &&
-        menuRefs.current[activeMenuProductId] &&
-        !menuRefs.current[activeMenuProductId]?.contains(e.target as Node)
-      ) {
-        setActiveMenuProductId(null)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [activeMenuProductId])
-
-  useEffect(() => {
     fetchProduits()
-  }, [])
+  }, [refreshTrigger])
 
   const handleCategoryToggle = (cat: string) => {
     setFilterCategories(prev =>
@@ -131,26 +116,26 @@ export default function ProduitsPage() {
 
   return (
     <>
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+      <main className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-5">
           <div>
-            <h1 className="text-3xl font-bold text-[#093A23] mb-1">Catalogue produits</h1>
+            <h1 className="text-2xl font-bold text-[#093A23] mb-1">Catalogue produits</h1>
             <p className="text-gray-600 text-sm">{productsFiltered.length} produit{productsFiltered.length > 1 ? 's' : ''} trouvé{productsFiltered.length > 1 ? 's' : ''}</p>
           </div>
           <button
             onClick={() => setModalOpen(true)}
-            className="bg-gradient-to-r from-[#093A23] to-[#0d5534] hover:from-[#0b472c] hover:to-[#106640] text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+            className="bg-gradient-to-r from-[#093A23] to-[#0d5534] hover:from-[#0b472c] hover:to-[#106640] text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
           >
-            <span className="text-xl">+</span>
-            Ajouter un produit
+            <span className="text-lg">+</span>
+            Nouveau produit
           </button>
         </div>
 
       {/* Filtres */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <span className="text-xl">🔍</span>
-          Filtres et recherche
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-4">
+        <h2 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <span className="text-base">🔍</span>
+          Filtres
         </h2>
         <div className="grid grid-cols-36 gap-y-5 items-start w-full">
   {/* Recherche (4 colonnes) */}
@@ -285,7 +270,7 @@ export default function ProduitsPage() {
 </div>
 
         {/* Filtres ligne 2 : catégories */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-4">
           <span className="text-sm font-medium text-gray-700 mr-2 flex items-center">🏷️ Catégories :</span>
           {uniqueCategories.map(cat => (
             <button
@@ -309,63 +294,62 @@ export default function ProduitsPage() {
             <p className="text-gray-500">Chargement...</p>
           </div>
         ) : productsFiltered.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
             {productsFiltered.map(product => (
-              <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden group hover:shadow-lg transition-all">
-                <div className="w-full aspect-[4/3] relative bg-gradient-to-br from-gray-50 to-gray-100">
+              <div key={product.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden group hover:shadow-md transition-all flex flex-row">
+                {/* Image */}
+                <div className="w-16 h-16 relative bg-gradient-to-br from-gray-50 to-gray-100 flex-shrink-0">
                   {images[product.id] ? (
-                    <img src={images[product.id]} alt={product.name} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <img src={images[product.id]} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                      <span className="text-4xl mb-2">📷</span>
-                      <span className="text-xs">Pas d'image</span>
+                      <span className="text-lg">📷</span>
+                      <span className="text-[8px]">Pas d'image</span>
                     </div>
                   )}
                 </div>
 
-                <div className="p-4">
-                  <div className="flex justify-between items-start gap-2 mb-2">
-                    <h3 className="font-semibold text-base leading-tight text-gray-900 line-clamp-2">{product.name}</h3>
-                    <div className="relative" ref={el => void(menuRefs.current[product.id] = el)}>
+                {/* Contenu */}
+                <div className="py-2 pl-2.5 pr-1.5 flex flex-col flex-1 justify-between">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-semibold leading-tight text-gray-900 line-clamp-1 ${
+                        product.name.length > 40 ? 'text-xs' : product.name.length > 25 ? 'text-[13px]' : 'text-sm'
+                      }`}>{product.name}</h3>
+                    </div>
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
                       <button
-                        onClick={() => setActiveMenuProductId(prev => prev === product.id ? null : product.id)}
-                        className="text-gray-400 hover:text-gray-700 text-xl p-1 rounded-full hover:bg-gray-100 transition"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedProduct(product)
+                          setEditModalOpen(true)
+                        }}
+                        className="p-1 text-gray-400 hover:text-[#093A23] hover:bg-gray-100 rounded transition"
+                        title="Modifier"
                       >
-                        ⋯
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
                       </button>
-                      {activeMenuProductId === product.id && (
-                        <div className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg text-sm z-20 w-44 overflow-hidden">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedProduct(product)
-                              setEditModalOpen(true)
-                              setActiveMenuProductId(null)
-                            }}
-                            className="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex items-center gap-2"
-                          >
-                            <span>✏️</span> Modifier
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setProductToDelete(product.id)
-                              setConfirmOpen(true)
-                              setActiveMenuProductId(null)
-                            }}
-                            className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 transition flex items-center gap-2 border-t border-gray-100"
-                          >
-                            <span>🗑️</span> Supprimer
-                          </button>
-                        </div>
-                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setProductToDelete(product.id)
+                          setConfirmOpen(true)
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                        title="Supprimer"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <p className="text-lg font-bold text-[#093A23]">{product.price} €</p>
+                  <div className="flex items-end justify-between mt-auto">
+                    <p className="text-sm font-bold text-[#093A23]">{product.price} €</p>
                     {product.category && (
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{product.category}</span>
+                      <span className="text-[8px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">{product.category}</span>
                     )}
                   </div>
                 </div>

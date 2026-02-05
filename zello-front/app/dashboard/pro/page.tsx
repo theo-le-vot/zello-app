@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { useStore } from '@/lib/contexts/StoreContext'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import HeaderPro from '@/components/HeaderPro'
 import MetricCard from '@/components/charts/MetricCard'
 import ChartContainer from '@/components/charts/ChartContainer'
 import DashboardFilters from '@/components/DashboardFilters'
@@ -24,6 +24,7 @@ interface ClientStat {
 
 export default function DashboardPro() {
   const router = useRouter()
+  const { refreshTrigger } = useStore()
   const [totalCA, setTotalCA] = useState(0)
   const [totalVisits, setTotalVisits] = useState(0)
   const [totalTransactions, setTotalTransactions] = useState(0)
@@ -155,7 +156,7 @@ export default function DashboardPro() {
     }
 
     fetchStats()
-  }, [router])
+  }, [router, refreshTrigger])
 
   const getSortedTopClients = () => {
     const sorted = [...topClients]
@@ -185,18 +186,15 @@ export default function DashboardPro() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <HeaderPro />
-      
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header with Filters */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight mb-1">Vue d'ensemble</h1>
-            <p className="text-sm text-gray-600">Suiv ez les performances de votre activité</p>
-          </div>
-          <DashboardFilters />
+    <>
+      {/* Header with Filters */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight mb-1">Vue d'ensemble</h1>
+          <p className="text-sm text-gray-600">Suivez les performances de votre activité</p>
         </div>
+        <DashboardFilters />
+      </div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -373,7 +371,6 @@ export default function DashboardPro() {
             </ResponsiveContainer>
           </div>
         </div>
-      </main>
-    </div>
+    </>
   )
 }
