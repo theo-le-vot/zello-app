@@ -6,6 +6,15 @@ import Link from 'next/link'
 import Image from 'next/image'
 import LogoZ from '/public/logo-z.svg'
 import { useSignupStore } from '@/lib/stores/signupStore'
+import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
+
+interface SiretInfo {
+  nom: string
+  adresse: string
+  codePostal: string
+  ville: string
+  activite: string
+}
 
 export default function EtablissementStep() {
   const router = useRouter()
@@ -24,7 +33,78 @@ export default function EtablissementStep() {
   })
 
   const [suggestions, setSuggestions] = useState<any[]>([])
+  const [siretVerifying, setSiretVerifying] = useState(false)
+  const [siretValid, setSiretValid] = useState<boolean | null>(null)
+  const [siretInfo, setSiretInfo] = useState<SiretInfo | null>(null)
+  const [siretError, setSiretError] = useState<string>('')
 
+  // Vérification du SIRET via API SIRENE
+  useEffect(() => {
+    const verifySiret = async () => {
+      const siret = form.siret.replace(/\s/g, '')
+      
+      // Validation du format
+      if (siret.length === 0) {
+        setSiretValid(null)
+        setSiretInfo(null)
+        setSiretError('')
+        return
+      }
+
+      if (!/^\d{14}$/.test(siret)) {
+        setSiretValid(false)
+        setSiretInfo(null)
+        setSiretError('Le SIRET doit contenir exactement 14 chiffres')
+        return
+      }
+
+      setSiretVerifying(true)
+      setSiretError('')
+
+      try {
+        const response = await fetch(
+          `/api/verify-siret?siret=${siret}`
+        )
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          setSiretValid(false)
+          setSiretInfo(null)
+          setSiretError(data.error || 'SIRET invalide')
+          setSiretVerifying(false)
+          return
+        }
+
+        // Les données sont déjà formatées par l'API route
+        setSiretInfo(data)
+        setSiretValid(true)
+
+        // Pré-remplir les champs si vides
+        setForm(prev => ({
+          ...prev,
+          nom: prev.nom || data.nom,
+          rue: prev.rue || data.adresse,
+          code_postal: prev.code_postal || data.codePostal,
+          ville: prev.ville || data.ville,
+          pays: prev.pays || 'France'
+        }))
+
+      } catch (error) {
+        console.error('Erreur vérification SIRET:', error)
+        setSiretValid(false)
+        setSiretInfo(null)
+        setSiretError('Erreur lors de la vérification')
+      } finally {
+        setSiretVerifying(false)
+      }
+    }
+
+    const delayDebounce = setTimeout(verifySiret, 800)
+    return () => clearTimeout(delayDebounce)
+  }, [form.siret])
+
+  // Autocomplétion adresse
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (form.rue.length < 3) {
@@ -60,6 +140,13 @@ export default function EtablissementStep() {
 
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Vérifier que le SIRET est valide avant de continuer
+    if (!siretValid) {
+      setSiretError('Veuillez entrer un SIRET valide')
+      return
+    }
+    
     setData(form)
     router.push('/signup/pro/compte')
   }
@@ -182,16 +269,60 @@ export default function EtablissementStep() {
             value={form.telephone}
             onChange={val => setForm({ ...form, telephone: val })}
           />
-          <FloatingInput
-            id="siret"
-            label="SIRET (optionnel)"
-            value={form.siret}
-            onChange={val => setForm({ ...form, siret: val })}
-          />
+
+          {/* SIRET avec vérification en temps réel */}
+          <div className="relative">
+            <input
+              id="siret"
+              type="text"
+              required
+              placeholder=" "
+              value={form.siret}
+              onChange={e => setForm({ ...form, siret: e.target.value })}
+              className="peer h-12 w-full border border-gray-300 rounded px-4 pr-10 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
+              maxLength={14}
+            />
+            <label
+              htmlFor="siret"
+              className="absolute left-4 text-gray-500 text-sm transition-all font-medium
+                peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
+                peer-focus:top-1 peer-focus:text-sm peer-focus:text-[#093A23]
+                peer-not-placeholder-shown:top-1 peer-not-placeholder-shown:text-sm peer-not-placeholder-shown:text-[#093A23]"
+            >
+              SIRET *
+            </label>
+            
+            {/* Icône de statut */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {siretVerifying && <Loader2 className="animate-spin text-gray-400" size={20} />}
+              {!siretVerifying && siretValid === true && <CheckCircle className="text-green-600" size={20} />}
+              {!siretVerifying && siretValid === false && <XCircle className="text-red-600" size={20} />}
+            </div>
+          </div>
+
+          {/* Message d'erreur SIRET */}
+          {siretError && (
+            <p className="text-sm text-red-600 -mt-2">{siretError}</p>
+          )}
+
+          {/* Informations de l'entreprise trouvée */}
+          {siretInfo && siretValid && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded space-y-2">
+              <p className="text-sm font-semibold text-green-800">✓ Entreprise trouvée</p>
+              <p className="text-sm text-gray-700"><strong>Nom :</strong> {siretInfo.nom}</p>
+              <p className="text-sm text-gray-700"><strong>Adresse :</strong> {siretInfo.adresse}</p>
+              <p className="text-sm text-gray-700"><strong>Ville :</strong> {siretInfo.codePostal} {siretInfo.ville}</p>
+              {siretInfo.activite && (
+                <p className="text-sm text-gray-700"><strong>Activité :</strong> {siretInfo.activite}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-2">Les champs ont été pré-remplis automatiquement</p>
+            </div>
+          )}
 
           <button
             type="submit"
-            className="w-full bg-[#093A23] text-white font-semibold py-2 rounded"
+            disabled={siretVerifying || !siretValid}
+            className="w-full bg-[#093A23] text-white font-semibold py-2 rounded disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             Continuer
           </button>

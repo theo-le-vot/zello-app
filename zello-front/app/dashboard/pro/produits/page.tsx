@@ -131,27 +131,36 @@ export default function ProduitsPage() {
 
   return (
     <>
-      <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold">Catalogue produits</h1>
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-[#093A23] mb-1">Catalogue produits</h1>
+            <p className="text-gray-600 text-sm">{productsFiltered.length} produit{productsFiltered.length > 1 ? 's' : ''} trouvé{productsFiltered.length > 1 ? 's' : ''}</p>
+          </div>
           <button
             onClick={() => setModalOpen(true)}
-            className="bg-[#093A23] hover:bg-[#0b472c] text-white px-4 py-2 rounded font-medium transition"
+            className="bg-gradient-to-r from-[#093A23] to-[#0d5534] hover:from-[#0b472c] hover:to-[#106640] text-white px-6 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
           >
-            + Ajouter un produit
+            <span className="text-xl">+</span>
+            Ajouter un produit
           </button>
         </div>
 
-      {/* Filtres ligne 1 avec grille 13 colonnes */}
-<div className="grid grid-cols-36 gap-y-5 items-start mb-6 w-full">
+      {/* Filtres */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <span className="text-xl">🔍</span>
+          Filtres et recherche
+        </h2>
+        <div className="grid grid-cols-36 gap-y-5 items-start w-full">
   {/* Recherche (4 colonnes) */}
   <div className="col-span-12">
     <input
       type="text"
-      placeholder="🔍 Rechercher"
+      placeholder="🔍 Rechercher un produit"
       value={searchTerm}
       onChange={e => setSearchTerm(e.target.value)}
-      className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm font-poppins"
+      className="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#093A23] focus:border-transparent"
     />
   </div>
 
@@ -160,7 +169,7 @@ export default function ProduitsPage() {
 
  {/* Prix (3 colonnes) */}
 <div className="col-span-7">
-  <label className="text-xs text-gray-600 font-medium mb-1 block">
+  <label className="text-sm font-medium text-gray-700 mb-2 block">
     Prix : {priceRange[0]}€ – {priceRange[1]}€
   </label>
   <div className="w-full">
@@ -247,9 +256,9 @@ export default function ProduitsPage() {
     <select
       value={sortOption}
       onChange={e => setSortOption(e.target.value)}
-      className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm font-poppins"
+      className="w-full border border-gray-300 px-4 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#093A23] focus:border-transparent bg-white"
     >
-      <option value="">Trier par</option>
+      <option value="">📊 Trier par</option>
       <option value="name-asc">Nom A → Z</option>
       <option value="name-desc">Nom Z → A</option>
       <option value="price-asc">Prix croissant</option>
@@ -267,25 +276,25 @@ export default function ProduitsPage() {
   <div className="col-span-5">
     <button
       onClick={handleResetFilters}
-      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm h-9 px-4 rounded-md"
+      className="w-full text-[#093A23] hover:text-[#0b472c] font-medium text-sm h-10 px-4 rounded-lg border border-[#093A23] hover:bg-[#093A23] hover:text-white transition-all"
     >
-      Réinitialiser
+      ↺ Réinitialiser
     </button>
   </div>
 </div>
-
-
+</div>
 
         {/* Filtres ligne 2 : catégories */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-8">
+          <span className="text-sm font-medium text-gray-700 mr-2 flex items-center">🏷️ Catégories :</span>
           {uniqueCategories.map(cat => (
             <button
               key={cat}
               onClick={() => handleCategoryToggle(cat)}
-              className={`px-3 py-1 rounded-full text-sm font-poppins border ${
+              className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
                 filterCategories.includes(cat)
-                  ? 'bg-[#093A23] text-white border-[#093A23]'
-                  : 'border-gray-300 text-gray-700'
+                  ? 'bg-gradient-to-r from-[#093A23] to-[#0d5534] text-white border-[#093A23] shadow-md'
+                  : 'border-gray-300 text-gray-700 hover:border-[#093A23] hover:text-[#093A23]'
               }`}
             >
               {cat}
@@ -295,66 +304,85 @@ export default function ProduitsPage() {
 
         {/* Liste produits */}
         {loading ? (
-          <p className="text-gray-500">Chargement...</p>
+          <div className="text-center py-12">
+            <div className="text-5xl mb-3">⏳</div>
+            <p className="text-gray-500">Chargement...</p>
+          </div>
         ) : productsFiltered.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {productsFiltered.map(product => (
-              <div key={product.id} className="bg-white p-4 rounded-xl shadow-sm relative group hover:shadow-md transition">
-                <div className="w-full aspect-[4/3] relative mb-3 rounded overflow-hidden bg-gray-100">
+              <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden group hover:shadow-lg transition-all">
+                <div className="w-full aspect-[4/3] relative bg-gradient-to-br from-gray-50 to-gray-100">
                   {images[product.id] ? (
-                    <img src={images[product.id]} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
+                    <img src={images[product.id]} alt={product.name} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">Pas d’image</div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                      <span className="text-4xl mb-2">📷</span>
+                      <span className="text-xs">Pas d'image</span>
+                    </div>
                   )}
                 </div>
 
-                <div className="flex justify-between items-start gap-2 mb-1">
-                  <p className="font-medium text-base leading-tight">{product.name}</p>
-                  <div className="relative" ref={el => void(menuRefs.current[product.id] = el)}>
-                    <button
-                      onClick={() => setActiveMenuProductId(prev => prev === product.id ? null : product.id)}
-                      className="text-gray-500 hover:text-black text-lg"
-                    >
-                      ⋯
-                    </button>
-                    {activeMenuProductId === product.id && (
-                      <div className="absolute right-0 mt-2 bg-white border rounded shadow text-sm z-20 w-44">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedProduct(product)
-                            setEditModalOpen(true)
-                            setActiveMenuProductId(null)
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100"
-                        >
-                          ✏️ Modifier
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setProductToDelete(product.id)
-                            setConfirmOpen(true)
-                            setActiveMenuProductId(null)
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                        >
-                          🗑️ Supprimer
-                        </button>
-                      </div>
+                <div className="p-4">
+                  <div className="flex justify-between items-start gap-2 mb-2">
+                    <h3 className="font-semibold text-base leading-tight text-gray-900 line-clamp-2">{product.name}</h3>
+                    <div className="relative" ref={el => void(menuRefs.current[product.id] = el)}>
+                      <button
+                        onClick={() => setActiveMenuProductId(prev => prev === product.id ? null : product.id)}
+                        className="text-gray-400 hover:text-gray-700 text-xl p-1 rounded-full hover:bg-gray-100 transition"
+                      >
+                        ⋯
+                      </button>
+                      {activeMenuProductId === product.id && (
+                        <div className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg text-sm z-20 w-44 overflow-hidden">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedProduct(product)
+                              setEditModalOpen(true)
+                              setActiveMenuProductId(null)
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex items-center gap-2"
+                          >
+                            <span>✏️</span> Modifier
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setProductToDelete(product.id)
+                              setConfirmOpen(true)
+                              setActiveMenuProductId(null)
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 transition flex items-center gap-2 border-t border-gray-100"
+                          >
+                            <span>🗑️</span> Supprimer
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg font-bold text-[#093A23]">{product.price} €</p>
+                    {product.category && (
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{product.category}</span>
                     )}
                   </div>
                 </div>
-
-                <p className="text-sm text-gray-600">{product.price} €</p>
-                {product.category && (
-                  <p className="text-xs text-gray-400 mt-1">{product.category}</p>
-                )}
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500">Aucun produit pour le moment.</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="text-6xl mb-4">📦</div>
+            <p className="text-gray-500 text-lg mb-2">Aucun produit trouvé</p>
+            <button 
+              onClick={handleResetFilters}
+              className="mt-4 text-[#093A23] hover:text-[#0b472c] font-medium underline"
+            >
+              Réinitialiser les filtres
+            </button>
+          </div>
         )}
       </main>
 

@@ -22,7 +22,11 @@ export default function AddClientModal({ isOpen, onClose, onSuccess }: AddClient
     setError('')
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setError('Utilisateur non connecté.')
+      setLoading(false)
+      return
+    }
 
     const { data: userData } = await supabase
       .from('users')
@@ -37,58 +41,64 @@ export default function AddClientModal({ isOpen, onClose, onSuccess }: AddClient
       return
     }
 
-    // Étape 1 – Créer un utilisateur client dans Supabase Auth
-    const password = crypto.randomUUID().slice(0, 10) + '!Aa' // mot de passe temporaire
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    })
+    try {
+      // Étape 1 – Créer le client dans la table customers (sans lien avec auth)
+      const { data: newCustomer, error: insertCustomerError } = await supabase
+        .from('customers')
+        .insert({
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone_number: phone,
+        })
+        .select()
+        .single()
 
-    if (authError || !authUser.user) {
-      setError("Erreur création utilisateur : " + authError?.message)
+      if (insertCustomerError) {
+        console.error('Erreur insertion customer:', insertCustomerError)
+        setError("Erreur lors de l'ajout du client : " + insertCustomerError.message)
+        setLoading(false)
+        return
+      }
+
+      if (!newCustomer) {
+        setError("Client non créé.")
+        setLoading(false)
+        return
+      }
+
+      // Étape 2 – Ajouter la relation avec la boutique
+      const { error: relError } = await supabase
+        .from('customers_stores')
+        .insert({
+          customer_id: newCustomer.id,
+          store_id: storeId,
+          join_date: new Date().toISOString().slice(0, 10),
+          points: 0,
+          visits: 0,
+          is_vip: false,
+        })
+
+      if (relError) {
+        console.error('Erreur relation boutique:', relError)
+        setError("Erreur lors de la liaison avec la boutique : " + relError.message)
+        setLoading(false)
+        return
+      }
+
+      // Succès
+      setFirstName('')
+      setLastName('')
+      setEmail('')
+      setPhone('')
       setLoading(false)
-      return
-    }
-
-    // Étape 2 – Ajouter les infos dans `customers`
-    const customerId = authUser.user.id
-    const { error: insertCustomerError } = await supabase
-      .from('customers')
-      .insert({
-        id: customerId,
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        phone_number: phone,
-      })
-
-    if (insertCustomerError) {
-      setError("Erreur insertion customer : " + insertCustomerError.message)
+      onSuccess()
+      onClose()
+    } catch (err: any) {
+      console.error('Erreur inattendue:', err)
+      setError('Erreur inattendue : ' + err.message)
       setLoading(false)
-      return
     }
-
-    // Étape 3 – Ajouter la relation avec la boutique
-    const { error: relError } = await supabase
-      .from('customers_stores')
-      .insert({
-        customer_id: customerId,
-        store_id: storeId,
-        join_date: new Date().toISOString().slice(0, 10),
-        points: 0,
-      })
-
-    if (relError) {
-      setError("Erreur relation boutique : " + relError.message)
-      setLoading(false)
-      return
-    }
-
-    // Succès
-    setLoading(false)
-    onClose()
-    onSuccess()
   }
 
   if (!isOpen) return null

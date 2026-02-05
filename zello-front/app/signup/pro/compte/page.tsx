@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import LogoZ from '/public/logo-z.svg'
 import { useSignupStore } from '@/lib/stores/signupStore'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function AdminAccountStep() {
   const router = useRouter()
@@ -143,17 +144,33 @@ type FloatingInputProps = {
 }
 
 function FloatingInput({ id, label, value, onChange, type = 'text', required = false }: FloatingInputProps) {
+  const [showPassword, setShowPassword] = useState(false)
+  const isPassword = type === 'password'
+  const inputType = isPassword && showPassword ? 'text' : type
+
   return (
     <div className="relative">
       <input
         id={id}
-        type={type}
+        type={inputType}
         required={required}
         placeholder=" "
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
+        className={`peer h-12 w-full border border-gray-300 rounded pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23] ${
+          isPassword ? 'px-4 pr-12' : 'px-4'
+        }`}
+        autoComplete={isPassword ? 'new-password' : undefined}
       />
+      {isPassword && (
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+        >
+          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      )}
       <label
         htmlFor={id}
         className="absolute left-4 text-gray-500 text-sm transition-all font-medium

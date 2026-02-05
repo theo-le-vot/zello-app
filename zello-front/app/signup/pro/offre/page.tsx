@@ -51,13 +51,23 @@ export default function OfferStep() {
       // 1. Création dans auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm?type=pro`,
+        }
       })
       if (authError) throw authError
 
       const userId = authData.user?.id
       if (!userId) throw new Error('Échec création utilisateur auth.')
       console.log('✅ Utilisateur auth créé :', userId)
+
+      // Vérifier si l'utilisateur doit confirmer son email
+      if (authData.user && !authData.session) {
+        // L'utilisateur doit confirmer son email
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`)
+        return
+      }
 
       console.log('➡️ Tentative d\'inscription dans la table user...')
 

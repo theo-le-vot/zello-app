@@ -7,6 +7,7 @@ import Image from 'next/image'
 import LogoZ from '/public/logo-z.svg'
 import { supabase } from '@/lib/supabaseClient'
 import { useSignupStore } from '@/lib/stores/signupStore'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function SignupClientPage() {
   const router = useRouter()
@@ -79,7 +80,10 @@ export default function SignupClientPage() {
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      password: form.password
+      password: form.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm?type=client`,
+      }
     })
 
     if (authError || !authData.user) {
@@ -91,26 +95,31 @@ export default function SignupClientPage() {
 
     const userId = authData.user.id
 
-    const { error: insertError } = await supabase.from('customers').insert({
-      id: userId,
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      birth_date: form.birthdate,
-      phone_number: form.phone,
-      lang: 'fr',
-      status: 'active',
-      points_total: 0,
-      street: form.street,
-      postal_code: form.postal_code,
-      city: form.city,
-      country: form.country
+    // Créer l'entrée customer via une fonction PostgreSQL qui bypass RLS
+    const { error: insertError } = await supabase.rpc('create_customer_profile', {
+      p_auth_user_id: userId,
+      p_first_name: firstName,
+      p_last_name: lastName,
+      p_email: email,
+      p_birth_date: form.birthdate,
+      p_phone_number: form.phone,
+      p_street: form.street,
+      p_postal_code: form.postal_code,
+      p_city: form.city,
+      p_country: form.country
     })
 
     if (insertError) {
       console.error('Erreur insert customers:', insertError)
       setError("L'inscription a échoué (enregistrement client).")
       setLoading(false)
+      return
+    }
+
+    // Vérifier si l'utilisateur doit confirmer son email
+    if (authData.user && !authData.session) {
+      // L'utilisateur doit confirmer son email
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`)
       return
     }
 
@@ -188,17 +197,33 @@ type FloatingInputProps = {
 }
 
 function FloatingInput({ id, label, value, onChange, type = 'text', required = false }: FloatingInputProps) {
+  const [showPassword, setShowPassword] = useState(false)
+  const isPassword = type === 'password'
+  const inputType = isPassword && showPassword ? 'text' : type
+
   return (
     <div className="relative">
       <input
         id={id}
-        type={type}
+        type={inputType}
         required={required}
         placeholder=" "
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="peer h-12 w-full border border-gray-300 rounded px-4 pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23]"
+        className={`peer h-12 w-full border border-gray-300 rounded pt-5 pb-1 placeholder-transparent focus:outline-none focus:border-[#093A23] ${
+          isPassword ? 'px-4 pr-12' : 'px-4'
+        }`}
+        autoComplete={isPassword ? 'new-password' : undefined}
       />
+      {isPassword && (
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+        >
+          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      )}
       <label
         htmlFor={id}
         className="absolute left-4 text-gray-500 text-sm transition-all font-medium

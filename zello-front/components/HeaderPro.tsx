@@ -3,9 +3,31 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import LogoZ from '/public/logo-z.svg'
-import { ChevronDown } from 'lucide-react'
+import { 
+  ChevronDown, 
+  BarChart3, 
+  Package, 
+  Users, 
+  Store, 
+  User, 
+  LogOut, 
+  Settings,
+  TrendingUp,
+  Activity,
+  UserCheck,
+  ShoppingCart,
+  Boxes,
+  Calendar,
+  Heart,
+  Mail,
+  Crown,
+  FileUp,
+  FileDown,
+  Zap
+} from 'lucide-react'
 
 interface Store {
   id: string
@@ -30,6 +52,7 @@ export default function HeaderPro() {
   const [analyseOpen, setAnalyseOpen] = useState(false)
   const [gestionOpen, setGestionOpen] = useState(false)
   const [relationOpen, setRelationOpen] = useState(false)
+  const [configOpen, setConfigOpen] = useState(false)
 
   const storeRef = useRef<HTMLDivElement | null>(null)
   const userRef = useRef<HTMLDivElement | null>(null)
@@ -37,6 +60,9 @@ export default function HeaderPro() {
   const analyseTimeout = useRef<NodeJS.Timeout | null>(null)
   const gestionTimeout = useRef<NodeJS.Timeout | null>(null)
   const relationTimeout = useRef<NodeJS.Timeout | null>(null)
+  const configTimeout = useRef<NodeJS.Timeout | null>(null)
+
+  const pathname = usePathname()
 
   // Ouverture / fermeture fluide des menus
   const handleEnter = (menu: string) => {
@@ -52,6 +78,10 @@ export default function HeaderPro() {
       if (relationTimeout.current) clearTimeout(relationTimeout.current)
       setRelationOpen(true)
     }
+    if (menu === 'config') {
+      if (configTimeout.current) clearTimeout(configTimeout.current)
+      setConfigOpen(true)
+    }
   }
 
   const handleLeave = (menu: string) => {
@@ -64,6 +94,9 @@ export default function HeaderPro() {
     }
     if (menu === 'relation') {
       relationTimeout.current = setTimeout(() => setRelationOpen(false), delay)
+    }
+    if (menu === 'config') {
+      configTimeout.current = setTimeout(() => setConfigOpen(false), delay)
     }
   }
 
@@ -122,6 +155,7 @@ export default function HeaderPro() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+
   const handleStoreSelect = async (store: Store) => {
     setActiveStore(store)
     setStoreMenuOpen(false)
@@ -141,139 +175,292 @@ export default function HeaderPro() {
     window.location.href = '/'
   }
 
+  const isActiveLink = (href: string) => pathname === href
+
   return (
-    <header className="w-full bg-white border-b border-gray-200 px-6 py-4 shadow-sm relative z-50">
-      <div className="max-w-7xl mx-auto flex justify-between items-center relative">
+    <header className="w-full bg-white border-b border-gray-200/60 shadow-sm sticky top-0 z-50 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-6 py-2.5">
+        <div className="flex justify-between items-center">
 
-        {/* Navigation principale */}
-        <nav className="flex gap-10 text-sm text-gray-700 font-medium relative">
+          {/* Logo + Navigation principale */}
+          <div className="flex items-center gap-8">
+            {/* Logo */}
+            <Link href="/dashboard/pro" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+              <Image src={LogoZ} alt="Zello logo" width={24} height={24} />
+              <span className="text-[#093A23] font-semibold text-lg tracking-tight">ZELLO</span>
+            </Link>
 
-          {/* Menu Analyse */}
-          <div
-            className="relative"
-            onMouseEnter={() => handleEnter('analyse')}
-            onMouseLeave={() => handleLeave('analyse')}
-          >
-            <button className="flex items-center gap-1">
-              Analyse <ChevronDown size={14} className="text-gray-500 mt-0.5" />
-            </button>
-            {analyseOpen && (
-              <div className="absolute bg-white border border-gray-200 rounded shadow-md w-48 mt-2 text-sm z-10">
-                <Link href="/dashboard/pro" className="block px-4 py-2 hover:bg-gray-100">Vue d’ensemble</Link>
-                <Link href="/dashboard/pro/performance" className="block px-4 py-2 hover:bg-gray-100">Performance</Link>
-                <Link href="/dashboard/pro/frequentation" className="block px-4 py-2 hover:bg-gray-100">Fréquentation</Link>
-                <Link href="/dashboard/pro/clients" className="block px-4 py-2 hover:bg-gray-100">Top Clients</Link>
-              </div>
-            )}
-          </div>
+            {/* Navigation principale */}
+            <nav className="flex gap-0.5 text-[13px] font-medium">
 
-          {/* Menu Gestion */}
-          <div
-            className="relative"
-            onMouseEnter={() => handleEnter('gestion')}
-            onMouseLeave={() => handleLeave('gestion')}
-          >
-            <button className="flex items-center gap-1">
-              Gestion <ChevronDown size={14} className="text-gray-500 mt-0.5" />
-            </button>
-            {gestionOpen && (
-              <div className="absolute bg-white border border-gray-200 rounded shadow-md w-48 mt-2 text-sm z-10">
-                <Link href="/dashboard/pro/ventes" className="block px-4 py-2 hover:bg-gray-100">Saisie ventes</Link>
-                <Link href="/dashboard/pro/produits" className="block px-4 py-2 hover:bg-gray-100">Produits</Link>
-                <Link href="/dashboard/pro/previsions" className="block px-4 py-2 hover:bg-gray-100">Prévisions</Link>
-              </div>
-            )}
-          </div>
-
-          {/* Menu Relation client */}
-          <div
-            className="relative"
-            onMouseEnter={() => handleEnter('relation')}
-            onMouseLeave={() => handleLeave('relation')}
-          >
-            <button className="flex items-center gap-1">
-              Relation client <ChevronDown size={14} className="text-gray-500 mt-0.5" />
-            </button>
-            {relationOpen && (
-              <div className="absolute bg-white border border-gray-200 rounded shadow-md w-56 mt-2 text-sm z-10">
-                <Link href="/dashboard/pro/clients" className="block px-4 py-2 hover:bg-gray-100">Mes clients</Link>
-                <Link href="/dashboard/pro/fidelisation" className="block px-4 py-2 hover:bg-gray-100">Fidélisation</Link>
-                <Link href="/dashboard/pro/marketing" className="block px-4 py-2 hover:bg-gray-100">Marketing</Link>
-              </div>
-            )}
-          </div>
-        </nav>
-
-        {/* Logo centré */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-          <Image src={LogoZ} alt="Zello logo" width={24} height={24} />
-          <span className="text-[#093A23] font-bold text-lg">ZELLO</span>
-        </div>
-
-        {/* Zone droite */}
-        <div className="flex items-center gap-6">
-
-          {/* Sélecteur de store */}
-          <div className="relative" ref={storeRef}>
-            <button
-              onClick={() => setStoreMenuOpen(!storeMenuOpen)}
-              className="flex items-center gap-2 focus:outline-none"
-            >
-              {activeStore?.logo_url ? (
-                <img src={activeStore.logo_url} alt="Logo store" className="w-8 h-8 rounded-full object-cover" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-300" />
-              )}
-              <span className="text-sm font-medium text-gray-800">
-                {activeStore?.name || 'Aucun store'}
-              </span>
-              <ChevronDown size={16} className="text-gray-500" />
-            </button>
-
-            {storeMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded shadow-md text-sm z-10">
-                {stores.map(store => (
-                  <button
-                    key={store.id}
-                    onClick={() => handleStoreSelect(store)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100"
-                  >
-                    {store.name}
-                  </button>
-                ))}
-                <hr className="my-1" />
-                <Link href="/dashboard/pro/settings" className="block px-4 py-2 hover:bg-gray-100 text-gray-700">
-                  Gérer mon store
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Profil utilisateur */}
-          <div className="relative" ref={userRef}>
-            <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-2 focus:outline-none">
-              {userData?.profile_photo ? (
-                <img src={userData.profile_photo} alt="Profil" className="w-8 h-8 rounded-full" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-300" />
-              )}
-              <span className="text-sm font-medium text-gray-800">
-                {userData?.first_name || '...'}
-              </span>
-              <ChevronDown size={16} className="text-gray-500" />
-            </button>
-
-            {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded shadow-md text-sm z-10">
-                <Link href="/profil" className="block px-4 py-2 hover:bg-gray-100">Gérer mon profil</Link>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                >
-                  Déconnexion
+              {/* Menu Tableau de bord */}
+              <div
+                className="relative"
+                onMouseEnter={() => handleEnter('analyse')}
+                onMouseLeave={() => handleLeave('analyse')}
+              >
+                <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                  pathname === '/dashboard/pro' || pathname?.includes('/performance') || pathname?.includes('/frequentation') || pathname?.includes('/top-clients') || pathname?.includes('/analyse-produits')
+                    ? 'bg-[#093A23]/5 text-[#093A23] font-semibold' 
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}>
+                  <BarChart3 size={15} strokeWidth={2} />
+                  Tableau de bord
+                  <ChevronDown size={13} className={`transition-transform ${analyseOpen ? 'rotate-180' : ''}`} />
                 </button>
+                {analyseOpen && (
+                  <div className="absolute left-0 bg-white border border-gray-200/60 rounded-xl shadow-xl shadow-gray-200/50 w-56 mt-2 py-1.5 text-[13px] backdrop-blur-sm">
+                    <Link href="/dashboard/pro" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <Activity size={15} strokeWidth={2} />
+                      Vue d&apos;ensemble
+                    </Link>
+                    <Link href="/dashboard/pro/performance" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/performance') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <TrendingUp size={15} strokeWidth={2} />
+                      Performance
+                    </Link>
+                    <Link href="/dashboard/pro/frequentation" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/frequentation') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <Calendar size={15} strokeWidth={2} />
+                      Fréquentation
+                    </Link>
+                    <Link href="/dashboard/pro/top-clients" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/top-clients') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <UserCheck size={15} strokeWidth={2} />
+                      Top Clients
+                    </Link>
+                    <Link href="/dashboard/pro/analyse-produits" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/analyse-produits') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <Boxes size={15} strokeWidth={2} />
+                      Analyse Produits
+                    </Link>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Menu Commerce */}
+              <div
+                className="relative"
+                onMouseEnter={() => handleEnter('gestion')}
+                onMouseLeave={() => handleLeave('gestion')}
+              >
+                <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                  pathname?.includes('/ventes') || pathname?.includes('/produits') || pathname?.includes('/conseil-prix')
+                    ? 'bg-[#093A23]/5 text-[#093A23] font-semibold' 
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}>
+                  <ShoppingCart size={15} strokeWidth={2} />
+                  Commerce
+                  <ChevronDown size={13} className={`transition-transform ${gestionOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {gestionOpen && (
+                  <div className="absolute left-0 bg-white border border-gray-200/60 rounded-xl shadow-xl shadow-gray-200/50 w-52 mt-2 py-1.5 text-[13px] backdrop-blur-sm">
+                    <Link href="/dashboard/pro/ventes" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/ventes') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <ShoppingCart size={15} strokeWidth={2} />
+                      Saisie ventes
+                    </Link>
+                    <Link href="/dashboard/pro/produits" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/produits') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <Package size={15} strokeWidth={2} />
+                      Produits
+                    </Link>
+                    <Link href="/dashboard/pro/conseil-prix" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/conseil-prix') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <TrendingUp size={15} strokeWidth={2} />
+                      Conseil prix
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Menu Clients */}
+              <div
+                className="relative"
+                onMouseEnter={() => handleEnter('relation')}
+                onMouseLeave={() => handleLeave('relation')}
+              >
+                <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                  pathname?.includes('/clients') || pathname?.includes('/fidelisation') || pathname?.includes('/marketing')
+                    ? 'bg-[#093A23]/5 text-[#093A23] font-semibold' 
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}>
+                  <Users size={15} strokeWidth={2} />
+                  Clients
+                  <ChevronDown size={13} className={`transition-transform ${relationOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {relationOpen && (
+                  <div className="absolute left-0 bg-white border border-gray-200/60 rounded-xl shadow-xl shadow-gray-200/50 w-52 mt-2 py-1.5 text-[13px] backdrop-blur-sm">
+                    <Link href="/dashboard/pro/clients" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/clients') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <Users size={15} strokeWidth={2} />
+                      Mes clients
+                    </Link>
+                    <Link href="/dashboard/pro/fidelisation" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/fidelisation') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <Heart size={15} strokeWidth={2} />
+                      Fidélisation
+                    </Link>
+                    <Link href="/dashboard/pro/marketing" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/marketing') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <Mail size={15} strokeWidth={2} />
+                      Marketing
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Menu Configuration */}
+              <div
+                className="relative"
+                onMouseEnter={() => handleEnter('config')}
+                onMouseLeave={() => handleLeave('config')}
+              >
+                <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                  pathname?.includes('/boutiques') || pathname?.includes('/integrations') || pathname?.includes('/imports') || pathname?.includes('/exports') || pathname?.includes('/analyses') || pathname?.includes('/previsions')
+                    ? 'bg-[#093A23]/5 text-[#093A23] font-semibold' 
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}>
+                  <Settings size={15} strokeWidth={2} />
+                  Configuration
+                  <ChevronDown size={13} className={`transition-transform ${configOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {configOpen && (
+                  <div className="absolute left-0 bg-white border border-gray-200/60 rounded-xl shadow-xl shadow-gray-200/50 w-56 mt-2 py-1.5 text-[13px] backdrop-blur-sm">
+                    <div className="px-3 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Etablissement</div>
+                    <Link href="/dashboard/pro/boutiques" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/boutiques') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <Store size={15} strokeWidth={2} />
+                      Mes boutiques
+                    </Link>
+                    <Link href="/dashboard/pro/integrations" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/integrations') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <Zap size={15} strokeWidth={2} />
+                      Intégrations
+                    </Link>
+                    <div className="my-1.5 border-t border-gray-200/60"></div>
+                    <div className="px-3 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Données</div>
+                    <Link href="/dashboard/pro/imports" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/imports') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <FileUp size={15} strokeWidth={2} />
+                      Imports
+                    </Link>
+                    <Link href="/dashboard/pro/exports" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/exports') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <FileDown size={15} strokeWidth={2} />
+                      Exports
+                    </Link>
+                    <div className="my-1.5 border-t border-gray-200/60"></div>
+                    <div className="px-3 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Avancé</div>
+                    <Link href="/dashboard/pro/analyses" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/analyses') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <BarChart3 size={15} strokeWidth={2} />
+                      Analyses avancées
+                    </Link>
+                    <Link href="/dashboard/pro/previsions" className={`flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 transition-colors ${isActiveLink('/dashboard/pro/previsions') ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'}`}>
+                      <TrendingUp size={15} strokeWidth={2} />
+                      Prévisions
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </nav>
+          </div>
+
+          {/* Zone droite */}
+          <div className="flex items-center gap-3">
+
+            <div className="w-px h-6 bg-gray-300"></div>
+
+            {/* Sélecteur de store */}
+            <div className="relative" ref={storeRef}>
+              <button
+                onClick={() => setStoreMenuOpen(!storeMenuOpen)}
+                className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#093A23]/10"
+              >
+                {activeStore?.logo_url ? (
+                  <img src={activeStore.logo_url} alt="Logo store" className="w-7 h-7 rounded-lg object-cover ring-1 ring-gray-200" />
+                ) : (
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#093A23] to-[#0d5534] flex items-center justify-center">
+                    <Store size={14} className="text-white" />
+                  </div>
+                )}
+                <span className="text-[13px] font-medium text-gray-700 max-w-[110px] truncate">
+                  {activeStore?.name || 'Aucun store'}
+                </span>
+                <ChevronDown size={14} className="text-gray-500" />
+              </button>
+
+              {storeMenuOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200/60 rounded-xl shadow-xl shadow-gray-200/50 text-[13px] backdrop-blur-sm">
+                  <div className="px-3 py-2.5 border-b border-gray-200/60">
+                    <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Mes établissements</div>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto py-1.5">
+                    {stores.map(store => (
+                      <button
+                        key={store.id}
+                        onClick={() => handleStoreSelect(store)}
+                        className={`w-full text-left px-3.5 py-2.5 hover:bg-gray-50 transition-colors flex items-center gap-2.5 ${
+                          store.id === activeStore?.id ? 'bg-[#093A23]/5 text-[#093A23] font-medium' : 'text-gray-700'
+                        }`}
+                      >
+                        {store.logo_url ? (
+                          <img src={store.logo_url} alt={store.name} className="w-7 h-7 rounded-lg object-cover border border-gray-200" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center border border-gray-200">
+                            <Store size={13} strokeWidth={2} className="text-gray-500" />
+                          </div>
+                        )}
+                        <span className="flex-1 truncate">{store.name}</span>
+                        {store.id === activeStore?.id && (
+                          <div className="w-1.5 h-1.5 bg-[#093A23] rounded-full"></div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Profil utilisateur */}
+            <div className="relative" ref={userRef}>
+              <button 
+                onClick={() => setUserMenuOpen(!userMenuOpen)} 
+                className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-gray-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#093A23]/10"
+              >
+                {userData?.profile_photo ? (
+                  <img src={userData.profile_photo} alt="Profil" className="w-7 h-7 rounded-full ring-1 ring-gray-200" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                    <User size={14} strokeWidth={2} className="text-white" />
+                  </div>
+                )}
+                <span className="text-[13px] font-medium text-gray-700">
+                  {userData?.first_name || '...'}
+                </span>
+                <ChevronDown size={14} className="text-gray-500" />
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200/60 rounded-xl shadow-xl shadow-gray-200/50 text-[13px] backdrop-blur-sm">
+                  <div className="px-3.5 py-3 border-b border-gray-200/60">
+                    <div className="font-semibold text-gray-900">{userData?.first_name}</div>
+                    <div className="text-[11px] text-gray-500 mt-0.5">Compte professionnel</div>
+                  </div>
+                  <div className="py-1.5">
+                    <Link 
+                      href="/dashboard/pro/profil" 
+                      className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
+                    >
+                      <User size={15} strokeWidth={2} />
+                      Mon profil
+                    </Link>
+                    <Link 
+                      href="/dashboard/pro/abonnement" 
+                      className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-gray-50 text-gray-700 transition-colors"
+                    >
+                      <Crown size={15} strokeWidth={2} />
+                      Mon abonnement
+                    </Link>
+                  </div>
+                  <div className="border-t border-gray-200/60 py-1.5">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-red-50 text-red-600 transition-colors"
+                    >
+                      <LogOut size={15} strokeWidth={2} />
+                      Déconnexion
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
