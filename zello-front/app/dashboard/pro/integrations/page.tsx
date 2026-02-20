@@ -17,7 +17,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Package
+  Package,
+  Users
 } from 'lucide-react'
 
 interface Integration {
@@ -346,6 +347,43 @@ export default function IntegrationsPage() {
     }
   }
 
+  const handleSyncCustomers = async (integration: Integration) => {
+    if (!activeStoreId || !integration.access_token) return
+
+    setSyncStatus('syncing')
+    setSyncMessage('Synchronisation des clients en cours...')
+
+    try {
+      const response = await fetch('/api/integrations/square/sync-customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: activeStoreId,
+          accessToken: integration.access_token
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setSyncStatus('success')
+        setSyncMessage(`✅ ${data.imported} clients importés, ${data.updated} mis à jour !`)
+        fetchIntegrations()
+        fetchSyncLogs()
+        
+        setTimeout(() => {
+          setSyncStatus('idle')
+        }, 3000)
+      } else {
+        setSyncStatus('error')
+        setSyncMessage('❌ ' + (data.error || 'Erreur de synchronisation'))
+      }
+    } catch (error: any) {
+      setSyncStatus('error')
+      setSyncMessage('❌ Erreur: ' + error.message)
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
         {/* En-tête */}
@@ -416,6 +454,32 @@ export default function IntegrationsPage() {
                 >
                   <ShoppingCart size={20} />
                   Importer catalogue
+                </button>
+              </div>
+            </div>
+
+            {/* Synchronisation des clients */}
+            <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+                    <Users className="text-purple-600" size={20} />
+                    Synchronisation des clients
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Importez tous vos clients depuis Square dans votre base de données Zello
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    const connectedIntegration = integrations.find(i => i.status === 'connected')
+                    if (connectedIntegration) handleSyncCustomers(connectedIntegration)
+                  }}
+                  disabled={syncStatus === 'syncing'}
+                  className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                >
+                  <Users size={20} />
+                  Synchroniser clients
                 </button>
               </div>
             </div>

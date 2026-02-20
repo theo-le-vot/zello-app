@@ -74,6 +74,10 @@ export async function POST(request: NextRequest) {
     const paymentsData = await paymentsResponse.json()
     const payments: SquarePayment[] = paymentsData.payments || []
 
+    console.log(`📦 Square Sync - Récupéré ${payments.length} paiements`)
+    console.log(`📅 Période: ${startDate} → ${endDate}`)
+    console.log(`📍 Location ID: ${locationId}`)
+
     // 2. Récupérer les commandes associées
     const orderIds = payments
       .filter(p => p.status === 'COMPLETED')
@@ -100,9 +104,20 @@ export async function POST(request: NextRequest) {
 
     // 3. Synchroniser dans Supabase
     const syncedTransactions = []
+    let importedCount = 0
+    let updatedCount = 0
+    let skippedCount = 0
+    
+    console.log(`🔄 Début synchronisation de ${payments.length} paiements...`)
     
     for (const payment of payments) {
-      if (payment.status !== 'COMPLETED') continue
+      console.log(`💳 Traitement paiement: ${payment.id}, status: ${payment.status}`)
+      
+      if (payment.status !== 'COMPLETED') {
+        console.log(`⏭️ Paiement ignoré (status: ${payment.status})`)
+        skippedCount++
+        continue
+      }
 
       // Convertir les centimes en euros
       const amount = payment.amount_money.amount / 100
@@ -110,24 +125,64 @@ export async function POST(request: NextRequest) {
       // Trouver la commande associée
       const order = orders.find(o => o.id === (payment as any).order_id)
 
-      // Créer la transaction dans Supabase
-      const { data: transaction, error: txError } = await supabase
+      // Vérifier si la transaction existe déjà
+      const { data: existingTx } = await supabase
         .from('transactions')
-        .insert({
-          store_id: storeId,
-          date: payment.created_at,
-          total_amount: amount,
-          payment_method: 'Carte bancaire',
-          transaction_type_code: 'V',
-          external_id: payment.id,
-          external_source: 'square'
-        })
-        .select()
+        .select('id')
+        .eq('store_id', storeId)
+        .eq('external_id', payment.id)
+        .eq('external_source', 'square')
         .single()
 
-      if (txError) {
-        console.error('Erreur insertion transaction:', txError)
-        continue
+      let transaction
+
+      if (existingTx) {
+        // Transaction existe déjà, la mettre à jour
+        console.log(`♻️ Transaction existe déjà: ${existingTx.id}`)
+        const { data: updatedTx, error: updateError } = await supabase
+          .from('transactions')
+          .update({
+            date: payment.created_at,
+            total_amount: amount,
+            payment_method: 'Carte bancaire',
+            transaction_type_code: 'c817b274-3378-44a3-8648-0c29858ee843'
+          })
+          .eq('id', existingTx.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          console.error('Erreur update transaction:', updateError)
+          skippedCount++
+          continue
+        }
+
+        transaction = updatedTx
+        updatedCount++
+      } else {
+        // Cole.log(`➕ Création nouvelle transaction pour paiement: ${payment.id}`)consréer une nouvelle transaction
+        const { data: newTx, error: txError } = await supabase
+          .from('transactions')
+          .insert({
+            store_id: storeId,
+            date: payment.created_at,
+            total_amount: amount,
+            payment_method: 'Carte bancaire',
+            transaction_type_code: 'c817b274-3378-44a3-8648-0c29858ee843',
+            external_id: payment.id,
+            external_source: 'square'
+          })
+          .select()
+          .single()
+
+        if (txError) {
+          console.error('Erreur insertion transaction:', txError)
+          skippedCount++
+          continue
+        }
+
+        transaction = newTx
+        importedCount++
       }
 
       // Ajouter les produits de la commande
@@ -188,6 +243,12 @@ export async function POST(request: NextRequest) {
       }
 
       syncedTransactions.push(transaction)
+    console.log(`✅ Synchronisation terminée:`)
+    console.log(`   - Importées: ${importedCount}`)
+    console.log(`   - Mises à jour: ${updatedCount}`)
+    console.log(`   - Ignorées: ${skippedCount}`)
+    console.log(`   - Total: ${syncedTransactions.length}`)
+
     }
 
     // 4. Mettre à jour la dernière synchro
@@ -210,7 +271,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       synced: syncedTransactions.length,
-      message: `${syncedTransactions.length} transactions synchronisées depuis Square`
+      imported: importedCount,
+      updated: updatedCount,
+      skipped: skippedCount,
+      message: `${importedCount} nouvelles ventes, ${updatedCount} mises à jour (${skippedCount} ignorées)`
     })
 
   } catch (error: any) {

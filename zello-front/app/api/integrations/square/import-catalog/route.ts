@@ -67,6 +67,9 @@ export async function POST(request: NextRequest) {
     const catalogData = await response.json()
     const items: SquareCatalogItem[] = catalogData.objects || []
 
+    console.log(`📦 Import catalogue: ${items.length} items trouvés dans Square`)
+    console.log(`🏪 Store ID: ${storeId}`)
+
     // 2. Importer les produits dans Supabase
     let importedCount = 0
     let updatedCount = 0
@@ -102,17 +105,29 @@ export async function POST(request: NextRequest) {
 
           if (existing) {
             // Mettre à jour le produit existant
-            await supabase
+            const { error: updateError } = await supabase
               .from('products')
               .update(productData)
               .eq('id', existing.id)
-            updatedCount++
+            
+            if (updateError) {
+              console.error('Erreur update:', updateError)
+              errors.push(`${itemData.name}: ${updateError.message}`)
+            } else {
+              updatedCount++
+            }
           } else {
             // Créer un nouveau produit
-            await supabase
+            const { error: insertError } = await supabase
               .from('products')
               .insert(productData)
-            importedCount++
+            
+            if (insertError) {
+              console.error('Erreur insert:', insertError)
+              errors.push(`${itemData.name}: ${insertError.message}`)
+            } else {
+              importedCount++
+            }
           }
         } catch (error: any) {
           errors.push(`${itemData.name}: ${error.message}`)
@@ -155,17 +170,29 @@ export async function POST(request: NextRequest) {
 
           if (existing) {
             // Mettre à jour
-            await supabase
+            const { error: updateError } = await supabase
               .from('products')
               .update(productData)
               .eq('id', existing.id)
-            updatedCount++
+            
+            if (updateError) {
+              console.error('Erreur update variation:', updateError)
+              errors.push(`${itemData.name} - ${variation.item_variation_data.name}: ${updateError.message}`)
+            } else {
+              updatedCount++
+            }
           } else {
             // Créer
-            await supabase
+            const { error: insertError } = await supabase
               .from('products')
               .insert(productData)
-            importedCount++
+            
+            if (insertError) {
+              console.error('Erreur insert variation:', insertError)
+              errors.push(`${itemData.name} - ${variation.item_variation_data.name}: ${insertError.message}`)
+            } else {
+              importedCount++
+            }
           }
         } catch (error: any) {
           errors.push(`${itemData.name} - ${variation.item_variation_data.name}: ${error.message}`)

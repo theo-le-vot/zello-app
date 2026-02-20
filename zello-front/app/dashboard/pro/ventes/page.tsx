@@ -66,9 +66,11 @@ export default function VentesPage() {
         total_amount,
         payment_method,
         customer_id,
+        transaction_type_code,
         transaction_type:transaction_type_code (
-          label,
-          code
+          id,
+          code,
+          label
         ),
         transaction_products (
           quantity,
@@ -108,9 +110,6 @@ export default function VentesPage() {
 
     const cleanData: Vente[] = (data || []).map((v: any) => ({
       ...v,
-      transaction_type: Array.isArray(v.transaction_type)
-        ? v.transaction_type[0] ?? null
-        : v.transaction_type ?? null,
       customer: v.customer_id ? customersMap.get(v.customer_id) || null : null
     }))
 
@@ -136,7 +135,7 @@ export default function VentesPage() {
       return true
     })
     .filter(v => v.total_amount >= amountRange[0] && v.total_amount <= amountRange[1])
-    .filter(v => v.transaction_type?.label?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    .filter(v => !searchTerm || v.transaction_type?.label?.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => {
       switch (sortOption) {
         case 'amount-asc': return a.total_amount - b.total_amount
